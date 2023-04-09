@@ -47,6 +47,10 @@ if (isNull _display) then {
         private _ctrlBodyImage = _display displayCtrl IDC_BODY_GROUP;
         [_ctrlBodyImage, _target] call FUNC(updateBodyImage);
 
+        // Update flash values
+        private _deltaTime = GVAR(camDeltaTime);
+        [_ctrlBodyImage, _deltaTime] call FUNC(updateFlashValues);
+        
         // Update injury list
         private _ctrlInjuries = _display displayCtrl IDC_INJURIES;
         [_ctrlInjuries, _target, _selectionN] call FUNC(updateInjuryList);

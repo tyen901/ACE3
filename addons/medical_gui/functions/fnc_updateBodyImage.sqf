@@ -23,6 +23,9 @@ private _tourniquets = GET_TOURNIQUETS(_target);
 private _fractures = GET_FRACTURES(_target);
 private _bodyPartDamage = _target getVariable [QEGVAR(medical,bodyPartDamage), [0, 0, 0, 0, 0, 0]];
 private _bodyPartBloodLoss = [0, 0, 0, 0, 0, 0];
+private _previousDamage = _ctrlGroup getVariable ["ace_medical_gui_previousDamage", [0, 0, 0, 0, 0, 0]];
+_ctrlGroup setVariable ["ace_medical_gui_previousDamage", _bodyPartDamage];
+
 
 {
     _x params ["", "_bodyPartN", "_amountOf", "_bleeding"];
@@ -68,6 +71,13 @@ private _bodyPartBloodLoss = [0, 0, 0, 0, 0, 0];
     } else {
         private _damage = _bodyPartDamage select _forEachIndex;
         [_damage] call FUNC(damageToRGBA);
+    };
+
+    private _previousBodyPartDamage = _previousDamage select _forEachIndex;
+    private _currentBodyPartDamage = _bodyPartDamage select _forEachIndex;
+    if (_currentBodyPartDamage > _previousBodyPartDamage) then {
+        private _flashIntensity = 1; // Set flash intensity (0 to 1)
+        GVAR(bodyPartFlashArray) set [_forEachIndex, [_bodyPartIDC, _flashIntensity]];
     };
 
     private _ctrlBodyPart = _ctrlGroup controlsGroupCtrl _bodyPartIDC;
