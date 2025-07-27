@@ -6,7 +6,7 @@ class GVAR(customArsenalButton_Button): RscButtonArsenal {
 
     text = QPATHTOF(data\iconCustom.paa);
     tooltip = "";
-    onButtonClick = QUOTE([ARR_2(ctrlParent (_this select 0),_this select 0)] call FUNC(fillRightPanel));
+    onButtonClick = QUOTE([ARR_3(ctrlParent (_this select 0),_this select 0,true)] call FUNC(fillRightPanel));
     colorBackground[] = {0,0,0,0.5};
 };
 

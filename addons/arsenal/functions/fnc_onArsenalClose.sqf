@@ -101,7 +101,7 @@ GVAR(liveUpdateSearch) = nil;
 GVAR(shiftState) = nil;
 GVAR(leftTabFocus) = nil;
 GVAR(rightTabFocus) = nil;
-GVAR(rightTabLnBFocus) = nil;
+// rightTabLnBFocus removed - using rightTabFocus for all right panel interactions
 GVAR(ignoreFirstSortPanelCall) = nil;
 GVAR(refreshing) = nil;
 

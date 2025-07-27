@@ -38,11 +38,7 @@ private _cfgUnitInsigniaMission = missionConfigFile >> "CfgUnitInsignia";
 
 if (_rightSort) then {
     [
-        if (_right) then {
-            _display displayCtrl IDC_rightTabContentListnBox
-        } else {
-            _display displayCtrl IDC_rightTabContent
-        },
+        _display displayCtrl IDC_rightTabContent,
         switch (GVAR(currentRightPanel)) do {
             case IDC_buttonCurrentMag;
             case IDC_buttonCurrentMag2;
@@ -118,22 +114,13 @@ missionNamespace setVariable [
     _sortDirection
 ];
 
-// Get currently selected item
-private _curSel = if (_right) then {
-    lnbCurSelRow _panel
-} else {
-    tvCurSel _panel  // Tree selection returns path array
-};
+// Get currently selected item - all panels now use tree controls
+private _curSel = tvCurSel _panel;  // Tree selection returns path array
 
-private _selected = if (_right) then {
-    _panel lnbData [_curSel, 0]
+private _selected = if (count _curSel > 0) then {
+    _panel tvData _curSel
 } else {
-    // For tree, get data from selected path
-    if (count _curSel > 0) then {
-        _panel tvData _curSel
-    } else {
-        ""
-    }
+    ""
 };
 
 private _item = "";
@@ -148,12 +135,19 @@ private _sortCache = uiNamespace getVariable QGVAR(sortCache);
 private _faceCache = uiNamespace getVariable QGVAR(faceCache);
 private _insigniaCache = uiNamespace getVariable QGVAR(insigniaCache);
 
-// For left panel (tree), we need to iterate through groups and items
-// For right panel, use existing listbox logic
+// All panels now use tree controls - collect all items from tree structure for sorting
 private _treeItems = [];
-if (!_right) then {
-    // Collect all items from tree structure for sorting
-    private _groupCount = _panel tvCount [];
+private _groupCount = _panel tvCount [];
+
+// Check if this is a flat structure (right panel) or grouped structure (left panel)
+private _isFlat = _rightSort && !_right;
+if (_isFlat) then {
+    // Right panel uses flat structure - all items are at root level
+    for "_itemIndex" from 0 to (_groupCount - 1) do {
+        _treeItems pushBack [_itemIndex];
+    };
+} else {
+    // Left panel or right panel containers use grouped structure
     for "_groupIndex" from 0 to (_groupCount - 1) do {
         private _itemCount = _panel tvCount [_groupIndex];
         for "_itemIndex" from 0 to (_itemCount - 1) do {
@@ -162,31 +156,22 @@ if (!_right) then {
     };
 };
 
-private _for = if (_right) then {
-    for "_i" from 0 to (lnbSize _panel select 0) - 1
-} else {
-    for "_i" from 0 to (count _treeItems) - 1
-};
+private _for = for "_i" from 0 to (count _treeItems) - 1;
 
 //IGNORE_PRIVATE_WARNING ["_i"];
 _for do {
-    // Get item
-    _item = if (_right) then {
-        _panel lnbData [_i, 0]
-    } else {
-        // For tree, get data from the item path
-        private _itemPath = _treeItems select _i;
-        _panel tvData _itemPath
-    };
+    // Get item from tree path
+    private _itemPath = _treeItems select _i;
+    _item = _panel tvData _itemPath;
 
     // Skip empty or group entries for tree
-    if (!_right && {_item == "" || {_item find "GROUP_" == 0}}) then {
+    if (_item == "" || {_item find "GROUP_" == 0}) then {
         continue;
     };
 
-    // Get item's count
-    _quantity = if (_right) then {
-        parseNumber (_panel lnbText [_i, 2])
+    // Get item's count (for right panel containers, this may be stored in tree value)
+    _quantity = if (_rightSort && {_right}) then {
+        _panel tvValue _itemPath
     } else {
         0
     };
@@ -241,40 +226,71 @@ _for do {
         _value
     }, true];
 
-    // Set the right text temporarily, so it can be used for sorting
-    if (_right) then {
-        // Use value, display name and classname to sort, which means a fixed alphabetical order is guaranteed
-        // Filler char has lowest lexicographical value possible
-        _panel lnbSetTextRight [[_i, 1], format ["%1%2%4%3", _value, _panel lnbText [_i, 1], _item, _fillerChar]];
-    } else {
-        if (_item != "") then {
-            // For tree, set sort data on the item
-            private _itemPath = _treeItems select _i;
-            private _displayName = _panel tvText _itemPath;
-            // Store sort value in tooltip temporarily
-            _panel tvSetTooltip [_itemPath, format ["%1%2%4%3", _value, _displayName, _item, _fillerChar]];
-        };
+    // Set the sort data temporarily in tooltip for tree sorting
+    if (_item != "") then {
+        private _itemPath = _treeItems select _i;
+        private _displayName = _panel tvText _itemPath;
+        // Store sort value in tooltip temporarily
+        _panel tvSetTooltip [_itemPath, format ["%1%2%4%3", _value, _displayName, _item, _fillerChar]];
     };
 };
 
-// Sort alphabetically, find the previously selected item and select it again
-if (_right) then {
-    [_panel, 1] lnbSortBy ["TEXT", _sortDirection == ASCENDING, false, true, true]; // do not support unicode, as it's much more performance intensive (~3x more)
+// Custom tree sorting - handle both flat and grouped structures
+private _selectedPath = [];
 
-    _for do {
-        // Remove sorting text, as it blocks the item name otherwise
-        _panel lnbSetTextRight [[_i, 1], ""];
-
-        if (_curSel != -1 && {(_panel lnbData [_i, 0]) == _selected}) then {
-            _panel lnbSetCurSelRow _i;
-
-            // To avoid unnecessary checks after previsouly selected item was found
-            _curSel = -1;
+if (_isFlat) then {
+    // Right panel uses flat structure - sort all items at root level
+    private _allItems = [];
+    private _itemCount = _panel tvCount [];
+    
+    // Collect all items with their sort data
+    for "_itemIndex" from 0 to (_itemCount - 1) do {
+        private _itemPath = [_itemIndex];
+        private _sortData = _panel tvTooltip _itemPath;
+        private _itemData = _panel tvData _itemPath;
+        private _itemText = _panel tvText _itemPath;
+        private _itemPicture = _panel tvPicture _itemPath;
+        private _itemPictureRight = _panel tvPictureRight _itemPath;
+        private _itemValue = _panel tvValue _itemPath;
+        
+        _allItems pushBack [_sortData, _itemData, _itemText, _itemPicture, _itemPictureRight, _itemValue];
+        
+        // Track selected item
+        if (_itemData == _selected) then {
+            _selectedPath = [count _allItems - 1]; // Will be updated after sort
         };
     };
+    
+    // Sort all items
+    _allItems sort (_sortDirection == ASCENDING);
+    
+    // Clear and repopulate with sorted items
+    tvClear _panel;
+    
+    {
+        _x params ["_sortData", "_itemData", "_itemText", "_itemPicture", "_itemPictureRight", "_itemValue"];
+        private _newItemIndex = _panel tvAdd [[], _itemText];
+        _panel tvSetData [[_newItemIndex], _itemData];
+        _panel tvSetPicture [[_newItemIndex], _itemPicture];
+        _panel tvSetPictureRight [[_newItemIndex], _itemPictureRight];
+        _panel tvSetValue [[_newItemIndex], _itemValue];
+        
+        // Restore favorites color if needed
+        if ((toLowerANSI _itemData) in GVAR(favorites)) then {
+            _panel tvSetPictureColor [[_newItemIndex], FAVORITES_COLOR];
+        };
+        
+        // Restore original tooltip (remove sort data)
+        private _originalTooltip = format ["%1\n%2", _itemText, _itemData];
+        _panel tvSetTooltip [[_newItemIndex], _originalTooltip];
+        
+        // Update selected path
+        if (_itemData == _selected) then {
+            _selectedPath = [_newItemIndex];
+        };
+    } forEach _allItems;
 } else {
-    // Custom tree sorting - sort items within each group
-    private _selectedPath = [];
+    // Left panel or right panel containers use grouped structure - sort items within each group
     private _groupCount = _panel tvCount [];
     
     for "_groupIndex" from 0 to (_groupCount - 1) do {
@@ -289,9 +305,9 @@ if (_right) then {
             private _itemText = _panel tvText _itemPath;
             private _itemPicture = _panel tvPicture _itemPath;
             private _itemPictureRight = _panel tvPictureRight _itemPath;
-            // Note: tvColor doesn't exist in ARMA 3, will handle colors separately
+            private _itemValue = _panel tvValue _itemPath;
             
-            _itemsInGroup pushBack [_sortData, _itemData, _itemText, _itemPicture, _itemPictureRight];
+            _itemsInGroup pushBack [_sortData, _itemData, _itemText, _itemPicture, _itemPictureRight, _itemValue];
             
             // Track selected item
             if (_itemData == _selected) then {
@@ -309,11 +325,12 @@ if (_right) then {
         
         // Add sorted items back
         {
-            _x params ["_sortData", "_itemData", "_itemText", "_itemPicture", "_itemPictureRight"];
+            _x params ["_sortData", "_itemData", "_itemText", "_itemPicture", "_itemPictureRight", "_itemValue"];
             private _newItemIndex = _panel tvAdd [[_groupIndex], _itemText];
             _panel tvSetData [[_groupIndex, _newItemIndex], _itemData];
             _panel tvSetPicture [[_groupIndex, _newItemIndex], _itemPicture];
             _panel tvSetPictureRight [[_groupIndex, _newItemIndex], _itemPictureRight];
+            _panel tvSetValue [[_groupIndex, _newItemIndex], _itemValue];
             
             // Restore favorites color if needed
             if ((toLowerANSI _itemData) in GVAR(favorites)) then {
@@ -330,9 +347,9 @@ if (_right) then {
             };
         } forEach _itemsInGroup;
     };
-    
-    // Restore selection
-    if (count _selectedPath == 2) then {
-        _panel tvSetCurSel _selectedPath;
-    };
+};
+
+// Restore selection
+if (count _selectedPath > 0) then {
+    _panel tvSetCurSel _selectedPath;
 };

@@ -56,15 +56,27 @@ private _container = switch (GVAR(currentLeftPanel)) do {
     };
 };
 
-// Clear number of owned items
-private _ctrlList = _display displayCtrl IDC_rightTabContentListnBox;
+// Clear number of owned items and refresh right panel
+private _ctrlTree = _display displayCtrl IDC_rightTabContent;
 
-for "_lbIndex" from 0 to (lbSize _ctrlList) - 1 do {
-    _ctrlList lnbSetText [[_lbIndex, 2], "0"];
+// Reset all item quantities to 0 in the tree display
+for "_lbIndex" from 0 to (_ctrlTree tvCount []) - 1 do {
+    private _xItem = _ctrlTree tvData [_lbIndex];
+    if (_xItem != "") then {
+        // Set quantity to 0
+        _ctrlTree tvSetValue [[_lbIndex], 0];
+        
+        // Update display text to remove quantity
+        private _originalName = GVAR(originalDisplayNames) getOrDefault [_xItem, "Unknown"];
+        _ctrlTree tvSetText [[_lbIndex], _originalName];
+    };
 };
 
 // Update load bar
 (_display displayCtrl IDC_loadIndicatorBar) progressSetPosition 0;
 
-// Refresh availibility of items based on space remaining in container
-[_ctrlList, _container, false] call FUNC(updateRightPanel);
+// Refresh availability of items based on space remaining in container
+[_ctrlTree, _container, false] call FUNC(updateRightPanel);
+
+// Refresh the dynamic container buttons with updated states (all should be disabled for minus, enabled for plus)
+[_display, _ctrlTree, _container, []] call FUNC(createContainerButtons);

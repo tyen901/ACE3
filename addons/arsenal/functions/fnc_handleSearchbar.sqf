@@ -38,90 +38,109 @@ if ((ctrlIDC _control) == IDC_rightSearchbar) then {
     // If nothing searched, quit here
     if (_searchPattern == "") exitWith {};
 
-    private _rightPanelState = GVAR(currentLeftPanel) in [IDC_buttonPrimaryWeapon, IDC_buttonHandgun, IDC_buttonSecondaryWeapon, IDC_buttonBinoculars];
-    private _rightPanelCtrl = [_display displayCtrl IDC_rightTabContentListnBox, _display displayCtrl IDC_rightTabContent] select _rightPanelState;
+    // All right panels now use tree controls exclusively
+    private _rightPanelCtrl = _display displayCtrl IDC_rightTabContent;
 
-    // If right panel selection is weapons or binoculars
-    if (_rightPanelState) then {
-        // Get the currently selected item in panel
-        private _selectedItemIndex = lbCurSel _rightPanelCtrl;
-        private _selectedItem = "";
+    // Get the currently selected item in tree panel
+    private _selectedPath = tvCurSel _rightPanelCtrl;
+    private _selectedItem = "";
 
-        // If something is selected, save it
-        if (_selectedItemIndex != -1) then {
-            _selectedItem = _rightPanelCtrl lbData _selectedItemIndex;
-        };
+    // If something is selected, save it
+    if (count _selectedPath > 0) then {
+        _selectedItem = _rightPanelCtrl tvData _selectedPath;
+    };
 
-        private _currentDisplayName = "";
-        private _currentClassname = "";
+    private _currentDisplayName = "";
+    private _currentClassname = "";
+    private _foundMatch = false;
 
-        // Go through all items in panel and see if they need to be deleted or not
-        for "_lbIndex" from (lbSize _rightPanelCtrl) - 1 to 0 step -1 do {
-            _currentDisplayName = _rightPanelCtrl lbText _lbIndex;
-            _currentClassname = _rightPanelCtrl lbData _lbIndex;
+    // Check if we have grouped tree (containers) or flat tree (weapons)
+    private _groupCount = _rightPanelCtrl tvCount [];
+    private _hasGroups = false;
+    
+    // Check if first level has groups (nested tree structure)
+    if (_groupCount > 0) then {
+        private _firstItemData = _rightPanelCtrl tvData [0];
+        _hasGroups = _firstItemData in ["CONTAINER_HEADER", "CURRENT_ITEMS_GROUP", "AVAILABLE_ITEMS_GROUP"] || 
+                     ((_rightPanelCtrl tvCount [0]) > 0);
+    };
 
-            // Remove item in panel if it doesn't match search, skip otherwise
-            if ((_currentDisplayName == "") || {!(_currentDisplayName regexMatch _searchPattern) && {!(_currentClassname regexMatch _searchPattern)}}) then {
-                _rightPanelCtrl lbDelete _lbIndex;
-            };
-        };
-
-        // Try to select previously selected item again, otherwise select nothing
-        if (_selectedItemIndex != -1) then {
-            private _index = -1;
-
-            // Try to find previously selected item in panel
-            for "_lbIndex" from 0 to (lbSize _rightPanelCtrl) - 1 do {
-                if ((_rightPanelCtrl lbData _lbIndex) == _selectedItem) exitWith {
-                    _index = _lbIndex;
+    if (_hasGroups) then {
+        // Handle grouped tree (containers)
+        for "_groupIndex" from (_groupCount - 1) to 0 step -1 do {
+            private _groupHasMatches = false;
+            private _itemCount = _rightPanelCtrl tvCount [_groupIndex];
+            
+            // Check all items in this group
+            for "_itemIndex" from (_itemCount - 1) to 0 step -1 do {
+                private _itemPath = [_groupIndex, _itemIndex];
+                _currentDisplayName = _rightPanelCtrl tvText _itemPath;
+                _currentClassname = _rightPanelCtrl tvData _itemPath;
+                
+                // Keep items that match search pattern
+                if ((_currentDisplayName != "") && {(_currentDisplayName regexMatch _searchPattern) || {_currentClassname regexMatch _searchPattern}}) then {
+                    _groupHasMatches = true;
+                    
+                    // Track if we found the previously selected item
+                    if (_currentClassname == _selectedItem) then {
+                        _foundMatch = true;
+                    };
+                } else {
+                    // Remove items that don't match
+                    _rightPanelCtrl tvDelete [_groupIndex, _itemIndex];
                 };
             };
-
-            // Select old item if found, otherwise don't select anything
-            _rightPanelCtrl lbSetCurSel _index;
-        } else {
-            _rightPanelCtrl lbSetCurSel -1;
+            
+            // Remove empty groups or groups with no matches
+            if (!_groupHasMatches) then {
+                _rightPanelCtrl tvDelete [_groupIndex];
+            } else {
+                // Expand groups that have matches for better visibility
+                _rightPanelCtrl tvExpand [_groupIndex];
+            };
         };
     } else {
-        // Get the currently selected item in panel
-        private _selectedItemIndex = lnbCurSelRow _rightPanelCtrl;
-        private _selectedItem = "";
+        // Handle flat tree (weapons/attachments)
+        for "_itemIndex" from (_groupCount - 1) to 0 step -1 do {
+            _currentDisplayName = _rightPanelCtrl tvText [_itemIndex];
+            _currentClassname = _rightPanelCtrl tvData [_itemIndex];
 
-        // If something is selected, save it
-        if (_selectedItemIndex != -1) then {
-            _selectedItem = _rightPanelCtrl lnbData [_selectedItemIndex, 0];
-        };
-
-        private _currentDisplayName = "";
-        private _currentClassname = "";
-
-        // Go through all items in panel and see if they need to be deleted or not
-        for "_lbIndex" from (lnbSize _rightPanelCtrl select 0) - 1 to 0 step -1 do {
-            _currentDisplayName = _rightPanelCtrl lnbText [_lbIndex, 1];
-            _currentClassname = _rightPanelCtrl lnbData [_lbIndex, 0];
-
-            // Remove item in panel if it doesn't match search, skip otherwise
+            // Remove item if it doesn't match search, skip otherwise
             if ((_currentDisplayName == "") || {!(_currentDisplayName regexMatch _searchPattern) && {!(_currentClassname regexMatch _searchPattern)}}) then {
-                _rightPanelCtrl lnbDeleteRow _lbIndex;
-            };
-        };
-
-        // Try to select previously selected item again, otherwise select nothing
-        if (_selectedItemIndex != -1) then {
-            private _index = -1;
-
-            // Try to find previously selected item in panel
-            for "_lbIndex" from 0 to (lnbSize _rightPanelCtrl select 0) - 1 do {
-                if ((_rightPanelCtrl lnbData [_lbIndex, 0]) == _selectedItem) exitWith {
-                    _index = _lbIndex;
+                _rightPanelCtrl tvDelete [_itemIndex];
+            } else {
+                // Track if we found the previously selected item
+                if (_currentClassname == _selectedItem) then {
+                    _foundMatch = true;
                 };
             };
-
-            // Select old item if found, otherwise don't select anything
-            _rightPanelCtrl lnbSetCurSelRow _index;
-        } else {
-            _rightPanelCtrl lnbSetCurSelRow -1;
         };
+    };
+
+    // Restore selection if possible
+    if (_foundMatch) then {
+        private _newGroupCount = _rightPanelCtrl tvCount [];
+        if (_hasGroups) then {
+            // Search in grouped tree
+            for "_groupIndex" from 0 to (_newGroupCount - 1) do {
+                private _newItemCount = _rightPanelCtrl tvCount [_groupIndex];
+                for "_itemIndex" from 0 to (_newItemCount - 1) do {
+                    private _itemPath = [_groupIndex, _itemIndex];
+                    if ((_rightPanelCtrl tvData _itemPath) == _selectedItem) exitWith {
+                        _rightPanelCtrl tvSetCurSel _itemPath;
+                    };
+                };
+            };
+        } else {
+            // Search in flat tree
+            for "_itemIndex" from 0 to (_newGroupCount - 1) do {
+                if ((_rightPanelCtrl tvData [_itemIndex]) == _selectedItem) exitWith {
+                    _rightPanelCtrl tvSetCurSel [_itemIndex];
+                };
+            };
+        };
+    } else {
+        _rightPanelCtrl tvSetCurSel [];
     };
 
     [_display, nil, nil, configNull] call FUNC(itemInfo);

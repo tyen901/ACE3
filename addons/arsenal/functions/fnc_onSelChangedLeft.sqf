@@ -349,7 +349,7 @@ switch (GVAR(currentLeftPanel)) do {
             // Display new container content in right panel
             TOGGLE_RIGHT_PANEL_CONTAINER
 
-            [_display, _selectCorrectPanelContainer] call FUNC(fillRightPanel);
+            [_display, _selectCorrectPanelContainer, true] call FUNC(fillRightPanel);
         };
 
         // Make unit switch to new item
@@ -423,7 +423,7 @@ switch (GVAR(currentLeftPanel)) do {
             // Display new container content in right panel
             TOGGLE_RIGHT_PANEL_CONTAINER
 
-            [_display, _selectCorrectPanelContainer] call FUNC(fillRightPanel);
+            [_display, _selectCorrectPanelContainer, true] call FUNC(fillRightPanel);
         };
 
         // Make unit switch to new item
@@ -497,7 +497,7 @@ switch (GVAR(currentLeftPanel)) do {
             // Display new container content in right panel
             TOGGLE_RIGHT_PANEL_CONTAINER
 
-            [_display, _selectCorrectPanelContainer] call FUNC(fillRightPanel);
+            [_display, _selectCorrectPanelContainer, true] call FUNC(fillRightPanel);
         };
 
         // Make unit switch to new item

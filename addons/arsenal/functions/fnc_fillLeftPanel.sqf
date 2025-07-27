@@ -61,6 +61,14 @@ if !(_ctrlIDC in [IDC_buttonFace, IDC_buttonVoice]) then {
 if !(_idxVirt in [IDX_VIRT_PRIMARY_WEAPONS, IDX_VIRT_SECONDARY_WEAPONS, IDX_VIRT_HANDGUN_WEAPONS, IDX_VIRT_BINO, IDX_VIRT_UNIFORM, IDX_VIRT_VEST, IDX_VIRT_BACKPACK]) then {
     GVAR(currentRightPanel) = nil;
 };
+
+// Set sensible default right panel for containers if none is set or if current tab doesn't make sense for containers
+if (_idxVirt in [IDX_VIRT_UNIFORM, IDX_VIRT_VEST, IDX_VIRT_BACKPACK]) then {
+    // If no right panel is set, or if the current right panel is weapon-specific, set default to "All Magazines"
+    if (isNil QGVAR(currentRightPanel) || {GVAR(currentRightPanel) in [IDC_buttonOptic, IDC_buttonItemAcc, IDC_buttonMuzzle, IDC_buttonBipod, IDC_buttonCurrentMag, IDC_buttonCurrentMag2]}) then {
+        GVAR(currentRightPanel) = IDC_buttonMagALL;
+    };
+};
 GVAR(currentLeftPanel) = _ctrlIDC;
 
 // Add items to the tree

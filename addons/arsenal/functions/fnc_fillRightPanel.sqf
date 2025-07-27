@@ -83,20 +83,24 @@ private _fnc_fillRightContainer = {
         [getText (_configPath >> "displayName"), getText (_configPath >> "picture")]
     }, true]) params ["_displayName", "_picture"];
 
-    private _lbAdd = _ctrlPanel lnbAddRow ["", _displayName, "0"];
-    _ctrlPanel lnbSetText [[_lbAdd, 1], _displayName];
-    _ctrlPanel lnbSetData [[_lbAdd, 0], _className];
-    _ctrlPanel lnbSetPicture [[_lbAdd, 0], _picture];
-    _ctrlPanel lnbSetValue [[_lbAdd, 2], parseNumber _isUnique];
-    _ctrlPanel lnbSetTooltip [[_lbAdd, 0], format ["%1\n%2", _displayName, _className]];
+    // Use tree control instead of listnbox
+    private _lbAdd = _ctrlPanel tvAdd [[], _displayName];
+    _ctrlPanel tvSetData [[_lbAdd], _className];
+    _ctrlPanel tvSetPicture [[_lbAdd], _picture];
+    _ctrlPanel tvSetTooltip [[_lbAdd], format ["%1\n%2", _displayName, _className]];
+    
+    // Store original display name in a clean way using global hashmap
+    if (isNil QGVAR(originalDisplayNames)) then {
+        GVAR(originalDisplayNames) = createHashMap;
+    };
+    GVAR(originalDisplayNames) set [_className, _displayName];
+    
     if ((toLowerANSI _className) in GVAR(favorites)) then {
-        _ctrlPanel lnbSetColor [[_lbAdd, 1], FAVORITES_COLOR];
-        _ctrlPanel lnbSetColorRight [[_lbAdd, 1], FAVORITES_COLOR];
+        _ctrlPanel tvSetPictureColor [[_lbAdd], FAVORITES_COLOR];
     };
 };
 
 private _ctrlPanel = _display displayCtrl IDC_rightTabContent;
-private _listnBox = _display displayCtrl IDC_rightTabContentListnBox;
 
 // Retrieve compatible items
 private _isContainer = false;
@@ -151,12 +155,12 @@ switch (GVAR(currentLeftPanel)) do {
     case IDC_buttonBackpack: {
         _isContainer = true;
 
-        // Get the currently selected item in panel
-        private _selectedItemIndex = lnbCurSelRow _listnBox;
+        // Get the currently selected item in tree panel
+        private _treeSelection = tvCurSel _ctrlPanel;
 
         // If something is selected, save it
-        if (_selectedItemIndex != -1) then {
-            _selectedItem = _listnBox lnbData [_selectedItemIndex, 0];
+        if (count _treeSelection == 1) then {
+            _selectedItem = _ctrlPanel tvData _treeSelection;
         };
 
         // This is for the "compatible magazines" tab when a container is open
@@ -166,32 +170,14 @@ switch (GVAR(currentLeftPanel)) do {
                 _compatibleMagsAll insert [true, compatibleMagazines _x, []];
             } forEach [GVAR(currentItems) select IDX_CURR_PRIMARY_WEAPON, GVAR(currentItems) select IDX_CURR_HANDGUN_WEAPON, GVAR(currentItems) select IDX_CURR_SECONDARY_WEAPON, GVAR(currentItems) select IDX_CURR_BINO];
         };
+        
+        // Don't exit - let the switch statement continue to populate items based on right panel tab
     };
 };
 
-// Reset right panel content
-// TODO: This mixed control clearing is a workaround because the Arsenal uses different
-// control types for different contexts within the same function:
-// - _ctrlPanel (IDC_rightTabContent) is a tree control for weapon attachments/magazines
-// - _listnBox (IDC_rightTabContentListnBox) is a listnbox control for container items
-// This should be refactored to use consistent control types or separate functions.
-// 
-// Current workaround: Clear both control types since we don't know which will be used
-tvClear _ctrlPanel;           // Clear tree control (for weapon panels)
-lnbClear _listnBox;           // Clear listnbox control (for container panels)
-
-_ctrlPanel tvSetCurSel [];    // Reset tree selection
-_listnBox lnbSetCurSelRow -1; // Reset listnbox selection
-
-// TODO: This control reassignment is part of the workaround for mixed control types.
-// When dealing with containers (uniforms, vests, backpacks), the function switches
-// from using the tree control to the listnbox control. This creates complexity in
-// selection restoration and requires different command sets throughout the function.
-// 
-// Current workaround: Reassign _ctrlPanel to point to the listnbox for container mode
-if (_isContainer) then {
-    _ctrlPanel = _listnBox;  // Switch from tree control to listnbox control
-};
+// Reset right panel content - now using tree control consistently
+tvClear _ctrlPanel;
+_ctrlPanel tvSetCurSel [];
 
 // Force a "refresh" animation of the panel
 if (_animate) then {
@@ -206,8 +192,8 @@ private _leftPanelState = GVAR(currentLeftPanel) in [IDC_buttonPrimaryWeapon, ID
 
 // Add an empty entry if left panel is a weapon or bino
 if (_leftPanelState && {_ctrlIDC in [RIGHT_PANEL_ACC_IDCS, IDC_buttonCurrentMag, IDC_buttonCurrentMag2]}) then {
-    private _addEmpty = _ctrlPanel lbAdd format [" <%1>", localize "str_empty"];
-    _ctrlPanel lbSetValue [_addEmpty, -1];
+    private _addEmpty = _ctrlPanel tvAdd [[], format [" <%1>", localize "str_empty"]];
+    _ctrlPanel tvSetValue [[_addEmpty], -1];
 };
 
 // Fill right panel according to category choice
@@ -222,7 +208,7 @@ switch (_ctrlIDC) do {
         if (_leftPanelState) then {
             {
                 if (_x in ((GVAR(virtualItems) get IDX_VIRT_ATTACHMENTS) get _index)) then {
-                    ["CfgWeapons", _x, _ctrlPanel] call FUNC(addListBoxItem);
+                    ["CfgWeapons", _x] call _fnc_fillRightContainer;
                 };
             } forEach _compatibleItems;
         } else {
@@ -241,7 +227,7 @@ switch (_ctrlIDC) do {
         if (_leftPanelState) then {
             {
                 if (_x in (GVAR(virtualItems) get IDX_VIRT_ITEMS_ALL)) then {
-                    ["CfgMagazines", _x, _ctrlPanel] call FUNC(addListBoxItem);
+                    ["CfgMagazines", _x] call _fnc_fillRightContainer;
                 };
             } forEach _compatibleMagsMuzzle;
         };
@@ -379,91 +365,102 @@ if (GVAR(currentRightPanel) != _ctrlIDC) then {
 GVAR(currentRightPanel) = _ctrlIDC;
 [QGVAR(rightPanelFilled), [_display, GVAR(currentLeftPanel), _ctrlIDC]] call CBA_fnc_localEvent;
 
-// Add current items, change progress bar of container load and get relevant container
+// Handle container display with new tree-based system
 if (_isContainer) then {
     private _containerItems = [];
-    private _container = switch (GVAR(currentLeftPanel)) do {
+    private _container = "";
+    private _containerType = "";
+    
+    switch (GVAR(currentLeftPanel)) do {
         // Uniform
         case IDC_buttonUniform: {
             // Update load bar
             (_display displayCtrl IDC_loadIndicatorBar) progressSetPosition (loadUniform GVAR(center));
-
-            // Get all items from container
+            
             _containerItems = uniformItems GVAR(center);
-
-            uniformContainer GVAR(center)
+            _container = uniformContainer GVAR(center);
+            _containerType = "uniform";
         };
         // Vest
         case IDC_buttonVest: {
             // Update load bar
             (_display displayCtrl IDC_loadIndicatorBar) progressSetPosition (loadVest GVAR(center));
-
-            // Get all items from container
+            
             _containerItems = vestItems GVAR(center);
-
-            vestContainer GVAR(center)
+            _container = vestContainer GVAR(center);
+            _containerType = "vest";
         };
         // Backpack
         case IDC_buttonBackpack: {
             // Update load bar
             (_display displayCtrl IDC_loadIndicatorBar) progressSetPosition (loadBackpack GVAR(center));
-
-            // Get all items from container
+            
             _containerItems = backpackItems GVAR(center);
-
-            backpackContainer GVAR(center)
+            _container = backpackContainer GVAR(center);
+            _containerType = "backpack";
+        };
+    };
+    
+    // Find out how many items of a type there are and update the number displayed
+    for "_lbIndex" from 0 to (_ctrlPanel tvCount []) - 1 do {
+        private _xItem = _ctrlPanel tvData [_lbIndex];
+        // Count items in container 
+        private _count = {_xItem == _x} count _containerItems;
+        
+        // Store count as tree value (like listnbox column 2)
+        _ctrlPanel tvSetValue [[_lbIndex], _count];
+        
+        // Get original display name from our clean hashmap
+        private _originalName = GVAR(originalDisplayNames) getOrDefault [_xItem, "Unknown"];
+        
+        // Always update display text - show quantity if > 0, otherwise just name
+        if (_count > 0) then {
+            _ctrlPanel tvSetText [[_lbIndex], format ["%1 (x%2)", _originalName, _count]];
+        } else {
+            _ctrlPanel tvSetText [[_lbIndex], _originalName];
         };
     };
 
-    // Find out how many items of a type there are and update the number displayed
-    for "_lbIndex" from 0 to (lnbSize _ctrlPanel select 0) - 1 do {
-        private _xItem = _ctrlPanel lnbData [_lbIndex, 0];
-        _ctrlPanel lnbSetText [[_lbIndex, 2], str ({_xItem == _x} count _containerItems)];
-    };
-
-    // Refresh availibility of items based on space remaining in container
+    // Refresh availability of items based on space remaining in container
     [_ctrlPanel, _container, _containerItems isNotEqualTo []] call FUNC(updateRightPanel);
+    
+    // Create dynamic +/- buttons for each container item
+    [_display, _ctrlPanel, _container, _containerItems] call FUNC(createContainerButtons);
+};
+
+// Clean up any existing container buttons when not in container mode
+if (!_isContainer) then {
+    private _existingButtons = uiNamespace getVariable [QGVAR(containerButtons), []];
+    {
+        ctrlDelete _x;
+    } forEach _existingButtons;
+    uiNamespace setVariable [QGVAR(containerButtons), []];
 };
 
 // Sorting
 [_display, _control, _display displayCtrl IDC_sortRightTab, _display displayCtrl IDC_sortRightTabDirection] call FUNC(fillSort);
 
-// TODO: This dual selection restoration logic is the most complex part of the workaround.
-// Because _ctrlPanel can be either a tree control or listnbox control depending on context,
-// we need completely different logic for finding and selecting items:
-// - Tree controls use tvCount, tvData, tvSetCurSel with path arrays [index]
-// - Listnbox controls use lnbSize, lnbData, lnbSetCurSelRow with numeric indices
-// This should be unified by using consistent control types or separate functions.
+// Restore selection using unified tree logic
 if (_selectedItem != "") then {
-    if (_isContainer) then {
-        // Listnbox control path: find item by row index
-        private _index = -1;
-
-        for "_lbIndex" from 0 to (lnbSize _ctrlPanel select 0) - 1 do {
-            if ((_ctrlPanel lnbData [_lbIndex, 0]) == _selectedItem) exitWith {
-                _index = _lbIndex;
-            };
+    private _found = false;
+    private _itemCount = _ctrlPanel tvCount [];
+    
+    // Search through flat tree to find the selected item
+    for "_itemIndex" from 0 to (_itemCount - 1) do {
+        if ((_ctrlPanel tvData [_itemIndex]) == _selectedItem) exitWith {
+            _ctrlPanel tvSetCurSel [_itemIndex];
+            _found = true;
         };
-
-        _ctrlPanel lnbSetCurSelRow _index;
-    } else {
-        // Tree control path: find item by tree path array
-        private _index = [0];
-
-        for "_tvIndex" from 0 to ((_ctrlPanel tvCount []) - 1) do {
-            if ((_ctrlPanel tvData [_tvIndex]) == _selectedItem) exitWith {
-                _index = [_tvIndex];
-            };
-        };
-
-        _ctrlPanel tvSetCurSel _index;
+    };
+    
+    // If not found, select first available item
+    if (!_found && _itemCount > 0) then {
+        _ctrlPanel tvSetCurSel [0];
     };
 } else {
-    // No previous selection - use appropriate "empty" selection for each control type
-    if (_isContainer) then {
-        _ctrlPanel lnbSetCurSelRow -1; // Listnbox: select nothing
-    } else {
-        _ctrlPanel tvSetCurSel [0]; // Tree: select "Empty" item
+    // No previous selection - select first item if available
+    if ((_ctrlPanel tvCount []) > 0) then {
+        _ctrlPanel tvSetCurSel [0];
     };
 };
 

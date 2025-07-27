@@ -24,5 +24,5 @@ _control ctrlSetText "";
 if (ctrlIDC _control == IDC_leftSearchbar) then {
     [_display, _display displayCtrl GVAR(currentLeftPanel)] call FUNC(fillLeftPanel);
 } else {
-    [_display, _display displayCtrl GVAR(currentRightPanel)] call FUNC(fillRightPanel);
+    [_display, _display displayCtrl GVAR(currentRightPanel), true] call FUNC(fillRightPanel);
 };
