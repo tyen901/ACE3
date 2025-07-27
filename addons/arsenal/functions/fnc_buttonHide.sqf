@@ -33,7 +33,6 @@ private _ctrl = controlNull;
     IDC_infoBox,
     IDC_leftTabContent,
     IDC_rightTabContent,
-    IDC_rightTabContentListnBox,
     IDC_sortLeftTab,
     IDC_sortRightTab,
     IDC_sortLeftTabDirection,

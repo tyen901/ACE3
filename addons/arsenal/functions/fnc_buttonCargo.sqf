@@ -20,15 +20,26 @@ if !(GVAR(currentLeftPanel) in [IDC_buttonUniform, IDC_buttonVest, IDC_buttonBac
 
 private _add = _addOrRemove > 0;
 
-private _ctrlList = _display displayCtrl IDC_rightTabContentListnBox;
-private _lnbCurSel = lnbCurSelRow _ctrlList;
-private _isUnique = (_ctrlList lnbValue [_lnbCurSel, 2]) == 1;
+private _ctrlTree = _display displayCtrl IDC_rightTabContent;
+private _treeCurSel = tvCurSel _ctrlTree;
+
+// Exit if no selection or invalid selection
+if (count _treeCurSel != 1) exitWith {};
+
+private _item = _ctrlTree tvData _treeCurSel;
+
+// Exit if no valid item selected
+if (_item == "") exitWith {
+    TRACE_2("Invalid item selected for cargo operation",_item,_treeCurSel);
+};
+
+// Check if item is unique (for backpacks and special items)
+private _isUnique = _item in ((uiNamespace getVariable QGVAR(configItems)) get IDX_VIRT_BACKPACK);
 
 // If item is unique, don't allow adding more
 if (_add && {_isUnique}) exitWith {};
 
 private _containerItems = [];
-private _item = _ctrlList lnbData [_lnbCurSel, 0];
 
 // Update item count and currentItems array & get relevant container
 private _container = switch (GVAR(currentLeftPanel)) do {
@@ -118,10 +129,30 @@ private _container = switch (GVAR(currentLeftPanel)) do {
     };
 };
 
-// Find out how many items of that type there are and update the number displayed
-_ctrlList lnbSetText [[_lnbCurSel, 2], str ({_item == _x} count _containerItems)];
-
 [QGVAR(cargoChanged), [_display, _item, _addOrRemove, GVAR(shiftState)]] call CBA_fnc_localEvent;
 
-// Refresh availibility of items based on space remaining in container
-[_ctrlList, _container, _containerItems isNotEqualTo []] call FUNC(updateRightPanel);
+// Get updated container items after the operation
+private _updatedContainerItems = switch (GVAR(currentLeftPanel)) do {
+    case IDC_buttonUniform: { uniformItems GVAR(center) };
+    case IDC_buttonVest: { vestItems GVAR(center) };
+    case IDC_buttonBackpack: { backpackItems GVAR(center) };
+    default { [] };
+};
+
+// Update the quantity display for the specific item in the tree
+private _currentQuantity = {_item == _x} count _updatedContainerItems;
+_ctrlTree tvSetValue [_treeCurSel, _currentQuantity];
+
+// Get original display name and update text with new quantity
+private _originalName = GVAR(originalDisplayNames) getOrDefault [_item, "Unknown"];
+if (_currentQuantity > 0) then {
+    _ctrlTree tvSetText [_treeCurSel, format ["%1 (x%2)", _originalName, _currentQuantity]];
+} else {
+    _ctrlTree tvSetText [_treeCurSel, _originalName];
+};
+
+// Refresh availability of items based on space remaining in container
+[_ctrlTree, _container, _updatedContainerItems isNotEqualTo []] call FUNC(updateRightPanel);
+
+// Refresh the dynamic container buttons with updated states
+[_display, _ctrlTree, _container, _updatedContainerItems] call FUNC(createContainerButtons);

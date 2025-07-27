@@ -66,7 +66,6 @@
 #define IDC_mouseBlock 12
 #define IDC_leftTabContent 13
 #define IDC_rightTabContent 14
-#define IDC_rightTabContentListnBox 15
 #define IDC_sortLeftTab 16
 #define IDC_sortLeftTabDirection 161
 #define IDC_sortRightTab 17
@@ -363,7 +362,6 @@ _buttonCurrentMag2Ctrl ctrlCommit FADE_DELAY;\
 } forEach [\
     IDC_loadIndicator,\
     RIGHT_PANEL_ITEMS_IDCS,\
-    IDC_rightTabContentListnBox,\
     RIGHT_PANEL_ITEMS_BACKGROUND_IDCS,\
     IDC_buttonRemoveAll\
 ];\
@@ -392,7 +390,6 @@ _buttonCurrentMag2Ctrl ctrlCommit FADE_DELAY;\
     IDC_blockRightFrame, \
     IDC_blockRighttBackground,\
     IDC_loadIndicator,\
-    IDC_rightTabContentListnBox,\
     IDC_sortRightTab,\
     IDC_sortRightTabDirection,\
     IDC_tabRight,\
@@ -475,7 +472,6 @@ if (!isNil QGVAR(customRightPanelButtons)) then {\
     IDC_blockRighttBackground,\
     IDC_loadIndicator,\
     IDC_rightTabContent,\
-    IDC_rightTabContentListnBox,\
     IDC_sortRightTab,\
     IDC_sortRightTabDirection,\
     RIGHT_PANEL_ACC_BACKGROUND_IDCS,\

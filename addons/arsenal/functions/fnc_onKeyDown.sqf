@@ -78,19 +78,25 @@ if (!isNull _loadoutsDisplay) then {
             };
             // Export button / export classname
             case (_keyPressed == DIK_C && {_ctrlState}): {
-                if (GVAR(leftTabFocus) || {GVAR(rightTabFocus)} || {GVAR(rightTabLnBFocus)}) then {
+                if (GVAR(leftTabFocus) || {GVAR(rightTabFocus)}) then {
                     switch (true) do {
                         case (GVAR(leftTabFocus)): {
                             private _control = (_display displayCtrl IDC_leftTabContent);
-                            _control lbData (lbCurSel _control)
+                            private _selection = tvCurSel _control;
+                            if (count _selection > 0) then {
+                                _control tvData _selection
+                            } else {
+                                ""
+                            }
                         };
                         case (GVAR(rightTabFocus)): {
                             private _control = (_display displayCtrl IDC_rightTabContent);
-                            _control lbData (lbCurSel _control)
-                        };
-                        case (GVAR(rightTabLnBFocus)): {
-                            private _control = (_display displayCtrl IDC_rightTabContentListnBox);
-                            _control lnbData [lnbCurSelRow _control, 0]
+                            private _selection = tvCurSel _control;
+                            if (count _selection > 0) then {
+                                _control tvData _selection
+                            } else {
+                                ""
+                            }
                         };
                     } params ["_className"];
 
@@ -104,19 +110,25 @@ if (!isNull _loadoutsDisplay) then {
             };
             // Export Parent
             case (_keyPressed == DIK_P && {_ctrlState}): {
-                if !(GVAR(leftTabFocus) || {GVAR(rightTabFocus)} || {GVAR(rightTabLnBFocus)}) exitWith {};
+                if !(GVAR(leftTabFocus) || {GVAR(rightTabFocus)}) exitWith {};
                 switch (true) do {
                     case (GVAR(leftTabFocus)): {
                         private _control = (_display displayCtrl IDC_leftTabContent);
-                        _control lbData (lbCurSel _control)
+                        private _selection = tvCurSel _control;
+                        if (count _selection > 0) then {
+                            _control tvData _selection
+                        } else {
+                            ""
+                        }
                     };
                     case (GVAR(rightTabFocus)): {
                         private _control = (_display displayCtrl IDC_rightTabContent);
-                        _control lbData (lbCurSel _control)
-                    };
-                    case (GVAR(rightTabLnBFocus)): {
-                        private _control = (_display displayCtrl IDC_rightTabContentListnBox);
-                        _control lnbData [lnbCurSelRow _control, 0]
+                        private _selection = tvCurSel _control;
+                        if (count _selection > 0) then {
+                            _control tvData _selection
+                        } else {
+                            ""
+                        }
                     };
                 } params ["_className"];
 
@@ -185,7 +197,7 @@ if (!isNull _loadoutsDisplay) then {
             };
             // Panel up down
             case (_keyPressed in [DIK_UP, DIK_DOWN]): {
-                if (GVAR(leftTabFocus) || {GVAR(rightTabFocus)} || {GVAR(rightTabLnBFocus)}) then {
+                if (GVAR(leftTabFocus) || {GVAR(rightTabFocus)}) then {
                     _return = false;
                 };
             };
@@ -214,7 +226,7 @@ if (!isNull _loadoutsDisplay) then {
                         };
                     };
                 };
-                if (GVAR(rightTabLnBFocus)) then {
+                if (GVAR(rightTabFocus) && {GVAR(currentLeftPanel) in [IDC_buttonUniform, IDC_buttonVest, IDC_buttonBackpack]}) then {
                     [_display, parseNumber (_keyPressed != DIK_LEFT)] call FUNC(buttonCargo);
                 };
             };

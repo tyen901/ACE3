@@ -28,12 +28,12 @@ if (isClass _itemCfg) then {
     [QGVAR(displayStats), [_display, _control, _curSel, _itemCfg]] call CBA_fnc_localEvent;
     [QGVAR(displayActions), [_display, _control, _curSel, _itemCfg]] call CBA_fnc_localEvent;
 
-    // Name + author
-    private _itemName = "";
-    if (ctrlType _control == CT_TREE) then {
-        _itemName = _control tvText _curSel;
+    // Name + author (all main panels now use tree controls)
+    private _itemName = if (ctrlType _control == CT_TREE) then {
+        _control tvText _curSel
     } else {
-        _itemName = [_control lbText _curSel, _control lnbText [_curSel, 1]] select (ctrlType _control == CT_LISTNBOX);
+        // Fallback for any remaining listbox controls (loadouts, etc.)
+        _control lbText _curSel
     };
     (_display displayCtrl IDC_infoName) ctrlSetText _itemName;
 

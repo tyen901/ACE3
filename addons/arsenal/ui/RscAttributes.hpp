@@ -577,45 +577,16 @@ class GVAR(display) {
         };
         class rightTabContent: leftTabContent {
             idc = IDC_rightTabContent;
+            idcLeft = IDC_arrowMinus;
+            idcRight = IDC_arrowPlus;
             drawSideArrows = 1;
             disableOverflow = 1;
-            // TODO: These event handlers were changed from listbox to tree control events as a workaround.
-            // Originally: onLBSelChanged and onLBDblClick (for listbox controls)
-            // Now: onTreeSelChanged and onTreeDblClick (for tree controls)
-            // This change was necessary because the control type was changed from listbox to tree,
-            // but the event handlers weren't updated accordingly. This should be part of a broader
-            // refactoring to use consistent control types throughout the Arsenal system.
             onTreeSelChanged = QUOTE([ARR_2(_this select 0, _this select 1)] call FUNC(onSelChangedRight));
             onTreeDblClick = QUOTE([ARR_2(_this select 0, _this select 1)] call FUNC(onPanelDblClick));
             onSetFocus = QUOTE(GVAR(rightTabFocus) = true);
             onKillFocus = QUOTE(GVAR(rightTabFocus) = false);
             x = QUOTE(safeZoneX + safeZoneW - 93 * GRID_W);
             h = QUOTE(safeZoneH - 28 * GRID_H);
-        };
-        class rightTabContentListnBox: RscListNBox {
-            idc = IDC_rightTabContentListnBox;
-            colorBackground[] = {0,0,0,0};
-            colorSelectBackground[] = {1,1,1,0.5};
-            colorSelectBackground2[] = {1,1,1,0.5};
-            colorPictureSelected[] = {1,1,1,1};
-            colorSelect[] = {1,1,1,1};
-            colorSelect2[] = {1,1,1,1};
-            colorPictureRightSelected[] = {1,1,1,1};
-            colorTextRight[] = {0.5, 0.5, 0.5, 0};
-            columns[] = {0.07, 0.15, 0.75};
-            idcLeft = IDC_arrowMinus;
-            idcRIght = IDC_arrowPlus;
-            drawSideArrows = 1;
-            disableOverflow = 1;
-            onLBSelChanged = QUOTE(call FUNC(onSelChangedRightListnBox));
-            onLBDblClick = QUOTE(call FUNC(onPanelDblClick));
-            onSetFocus = QUOTE(GVAR(rightTabLnBFocus) = true);
-            onKillFocus = QUOTE(GVAR(rightTabLnBFocus) = false);
-            x = QUOTE(safeZoneX + safeZoneW - 93 * GRID_W);
-            y = QUOTE(safeZoneY + 14 * GRID_H);
-            w = QUOTE(80 * GRID_W);
-            h = QUOTE(safeZoneH - 34 * GRID_H);
-            sizeEx = QUOTE(7 * GRID_H);
         };
         class sortLeftTab: RscCombo {
             idc = IDC_sortLeftTab;
@@ -888,7 +859,7 @@ class GVAR(display) {
             idc = IDC_buttonOptic;
             tooltip = "$STR_A3_RscDisplayArsenal_tab_ItemOptic";
             text = "\A3\Ui_f\data\GUI\Rsc\RscDisplayArsenal\ItemOptic_ca.paa";
-            onButtonClick = QUOTE([ARR_2(ctrlParent (_this select 0),_this select 0)] call FUNC(fillRightPanel));
+            onButtonClick = QUOTE([ARR_3(ctrlParent (_this select 0),_this select 0,true)] call FUNC(fillRightPanel));
             colorBackground[] = {0,0,0,0.5};
             x = QUOTE(safeZoneW + safeZoneX - 10 * GRID_W);
             y = QUOTE(safeZoneY + 8 * GRID_H);

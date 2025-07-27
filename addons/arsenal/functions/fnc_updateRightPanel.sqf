@@ -1,11 +1,11 @@
 #include "..\script_component.hpp"
 #include "..\defines.hpp"
 /*
- * Author: Alganthe, johnb43
- * Update the right panel (listnbox).
+ * Author: Alganthe, johnb43, ACE Team
+ * Update the right panel tree control for container availability.
  *
  * Arguments:
- * 0: Right panel control <CONTROL>
+ * 0: Right panel tree control <CONTROL>
  * 1: Container <OBJECT>
  * 2: If container has items <BOOL>
  *
@@ -15,25 +15,26 @@
  * Public: No
 */
 
-params ["_control", "_container", "_hasItems"];
+params ["_treeControl", "_container", "_hasItems"];
 
 private _item = "";
-private _color = [];
 private _alpha = 1;
 
-// Grey out items that are too big to fit in remaining space of the container
-for "_row" from 0 to (lnbSize _control select 0) - 1 do {
-    _item = _control lnbData [_row, 0];
-    _color = _control lnbColor [_row, 1];
-
-    // Lower alpha on color for items that can't fit
-    _alpha = [0.25, 1] select (_container canAdd _item);
-    _color set [3, _alpha];
-    _control lnbSetColor [[_row, 1], _color];
-    _control lnbSetColor [[_row, 2], [1, 1, 1, _alpha]];
+// Update item availability colors - grey out items that can't fit
+private _itemCount = _treeControl tvCount [];
+for "_itemIndex" from 0 to (_itemCount - 1) do {
+    _item = _treeControl tvData [_itemIndex];
+    
+    // Skip empty items
+    if (_item != "") then {
+        // Lower alpha for items that can't fit in container
+        _alpha = [0.25, 1] select (_container canAdd _item);
+        private _color = [1, 1, 1, _alpha];
+        _treeControl tvSetPictureColor [[_itemIndex], _color];
+    };
 };
 
-private _display = ctrlParent _control;
+private _display = ctrlParent _treeControl;
 
 // If there are items inside container, show "remove all" button
 private _removeAllCtrl = _display displayCtrl IDC_buttonRemoveAll;
@@ -47,11 +48,7 @@ _removeAllCtrl ctrlCommit FADE_DELAY;
 // Update weight display
 (_display displayCtrl IDC_totalWeightText) ctrlSetText (format ["%1 (%2)", GVAR(center) call EFUNC(common,getWeight), [GVAR(center), 1] call EFUNC(common,getWeight)]);
 
-private _curSel = lnbCurSelRow _control;
+private _curSel = tvCurSel _treeControl;
 
-// Disable '+' button if item is unique or too big to fit in remaining space
-if (_curSel != -1) then {
-    private _plusButtonCtrl = _display displayCtrl IDC_arrowPlus;
-    _plusButtonCtrl ctrlEnable ((_control lnbValue [_curSel, 2]) != 1 && {_container canAdd (_control lnbData [_curSel, 0])});
-    _plusButtonCtrl ctrlCommit FADE_DELAY;
-};
+// Note: Button state management is now handled by dynamic container buttons in createContainerButtons
+// This function now only handles item availability colors and remove all button

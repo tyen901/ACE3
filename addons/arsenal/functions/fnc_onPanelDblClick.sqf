@@ -20,24 +20,11 @@ if !(GVAR(shiftState)) exitWith {};
 
 if (GVAR(currentLeftPanel) in [IDC_buttonFace, IDC_buttonVoice, IDC_buttonInsigina]) exitWith {};
 
-private _controlType = ctrlType _control;
-private _isLnB = _controlType == CT_LISTNBOX;
-private _isTree = _controlType == CT_TREE;
+// All panels now use tree controls exclusively
+if (count _selection == 0) exitWith {};
 
 private _favorited = false;
-
-// Favorites/blacklist will always be lowercase to handle configCase changes
-private _item = "";
-if (_isLnB) then {
-    _item = toLowerANSI (_control lnbData [_selection, 0]);
-} else {
-    if (_isTree) then {
-        if (count _selection == 0) exitWith {};
-        _item = toLowerANSI (_control tvData _selection);
-    } else {
-        _item = toLowerANSI (_control lbData _selection);
-    };
-};
+private _item = toLowerANSI (_control tvData _selection);
 
 if (_item in GVAR(favorites)) then {
     GVAR(favorites) deleteAt _item;
@@ -48,14 +35,5 @@ if (_item in GVAR(favorites)) then {
 
 private _color = ([[1, 1, 1], GVAR(favoritesColor)] select _favorited) + [1];
 
-if (_isLnB) then {
-    _control lnbSetColor [[_selection, 1], _color];
-    _control lnbSetColorRight [[_selection, 1], _color];
-} else {
-    if (_isTree) then {
-        _control tvSetColor [_selection, _color];
-    } else {
-        _control lbSetColor [_selection, _color];
-        _control lbSetSelectColor [_selection, _color];
-    };
-};
+// All panels use tree controls - set picture color for favorites
+_control tvSetPictureColor [_selection, _color];

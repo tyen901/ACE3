@@ -116,7 +116,6 @@ _mouseBlockCtrl ctrlEnable false;
     IDC_blockRighttBackground,
     IDC_loadIndicator,
     IDC_rightTabContent,
-    IDC_rightTabContentListnBox,
     IDC_sortRightTab,
     RIGHT_PANEL_ACC_BACKGROUND_IDCS,
     RIGHT_PANEL_ACC_IDCS,
@@ -233,7 +232,7 @@ GVAR(rightSearchbarFocus) = false;
 GVAR(liveUpdateSearch) = false;
 GVAR(leftTabFocus) = false;
 GVAR(rightTabFocus) = false;
-GVAR(rightTabLnBFocus) = false;
+// rightTabLnBFocus removed - using rightTabFocus for all right panel interactions
 GVAR(ignoreFirstSortPanelCall) = false;
 GVAR(refreshing) = false;
 
@@ -241,7 +240,7 @@ GVAR(refreshing) = false;
     private _panel = _display displayCtrl _x;
     _panel ctrlSetFontHeight (GVAR(fontHeight) * GRID_H);
     _panel ctrlCommit 0;
-} forEach [IDC_leftTabContent, IDC_rightTabContent, IDC_rightTabContentListnBox];
+} forEach [IDC_leftTabContent, IDC_rightTabContent];
 
 // Open left panel for current weapon, do some math
 GVAR(selectedWeaponType) = [primaryWeapon GVAR(center), secondaryWeapon GVAR(center), handgunWeapon GVAR(center), binocular GVAR(center)] find (currentWeapon GVAR(center));
