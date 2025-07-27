@@ -509,16 +509,64 @@ switch (GVAR(currentLeftPanel)) do {
 
     // For all other categories, just update the current item and show it
     default {
-        // Update current item based on panel
+        // Update current item based on panel and apply immediately
         switch (GVAR(currentLeftPanel)) do {
-            case IDC_buttonHeadgear: {GVAR(currentItems) set [IDX_CURR_HEADGEAR, _item]};
-            case IDC_buttonGoggles: {GVAR(currentItems) set [IDX_CURR_GOGGLES, _item]};
-            case IDC_buttonNVG: {GVAR(currentItems) set [IDX_CURR_NVG, _item]};
-            case IDC_buttonBinoculars: {GVAR(currentItems) set [IDX_CURR_BINO, _item]};
-            case IDC_buttonMap: {GVAR(currentItems) set [IDX_CURR_MAP, _item]};
-            case IDC_buttonCompass: {GVAR(currentItems) set [IDX_CURR_COMPASS, _item]};
-            case IDC_buttonRadio: {GVAR(currentItems) set [IDX_CURR_RADIO, _item]};
-            case IDC_buttonWatch: {GVAR(currentItems) set [IDX_CURR_WATCH, _item]};
+            case IDC_buttonHeadgear: {
+                GVAR(currentItems) set [IDX_CURR_HEADGEAR, _item];
+                removeHeadgear GVAR(center);
+                if (_item != "") then {
+                    GVAR(center) addHeadgear _item;
+                };
+            };
+            case IDC_buttonGoggles: {
+                GVAR(currentItems) set [IDX_CURR_GOGGLES, _item];
+                removeGoggles GVAR(center);
+                if (_item != "") then {
+                    GVAR(center) addGoggles _item;
+                };
+            };
+            case IDC_buttonNVG: {
+                GVAR(currentItems) set [IDX_CURR_NVG, _item];
+                GVAR(center) unlinkItem (hmd GVAR(center));
+                if (_item != "") then {
+                    GVAR(center) linkItem _item;
+                };
+            };
+            case IDC_buttonBinoculars: {
+                GVAR(currentItems) set [IDX_CURR_BINO, _item];
+                GVAR(center) removeBinocularItem (binocular GVAR(center));
+                if (_item != "") then {
+                    GVAR(center) addWeapon _item;
+                };
+            };
+            case IDC_buttonMap: {
+                GVAR(currentItems) set [IDX_CURR_MAP, _item];
+                GVAR(center) unlinkItem (assignedItems GVAR(center) select 0);
+                if (_item != "") then {
+                    GVAR(center) linkItem _item;
+                };
+            };
+            case IDC_buttonCompass: {
+                GVAR(currentItems) set [IDX_CURR_COMPASS, _item];
+                GVAR(center) unlinkItem (assignedItems GVAR(center) select 1);
+                if (_item != "") then {
+                    GVAR(center) linkItem _item;
+                };
+            };
+            case IDC_buttonRadio: {
+                GVAR(currentItems) set [IDX_CURR_RADIO, _item];
+                GVAR(center) unlinkItem (assignedItems GVAR(center) select 2);
+                if (_item != "") then {
+                    GVAR(center) linkItem _item;
+                };
+            };
+            case IDC_buttonWatch: {
+                GVAR(currentItems) set [IDX_CURR_WATCH, _item];
+                GVAR(center) unlinkItem (assignedItems GVAR(center) select 3);
+                if (_item != "") then {
+                    GVAR(center) linkItem _item;
+                };
+            };
             case IDC_buttonFace: {GVAR(currentFace) = _item};
             case IDC_buttonVoice: {GVAR(currentVoice) = _item};
             case IDC_buttonInsignia: {GVAR(currentInsignia) = _item};
@@ -526,6 +574,13 @@ switch (GVAR(currentLeftPanel)) do {
 
         // Make unit switch to new item
         call FUNC(showItem);
+
+        // Hide right panel for non-weapon items that don't have options
+        private _rightPanelControls = [IDC_rightTabContent, IDC_rightTabContentListnBox, IDC_rightSearchbar];
+        {
+            private _ctrl = _display displayCtrl _x;
+            _ctrl ctrlShow false;
+        } forEach _rightPanelControls;
 
         // Determine config type based on panel
         private _configClass = switch (GVAR(currentLeftPanel)) do {
