@@ -79,20 +79,24 @@ if (!isNull _loadoutsDisplay) then {
             // Export button / export classname
             case (_keyPressed == DIK_C && {_ctrlState}): {
                 if (GVAR(leftTabFocus) || {GVAR(rightTabFocus)} || {GVAR(rightTabLnBFocus)}) then {
-                    switch (true) do {
+                    private _className = switch (true) do {
                         case (GVAR(leftTabFocus)): {
                             private _control = (_display displayCtrl IDC_leftTabContent);
-                            _control lbData (lbCurSel _control)
+                            private _selection = ["getCurSel", _control, []] call FUNC(controlInterface);
+                            ["getData", _control, [_selection]] call FUNC(controlInterface)
                         };
                         case (GVAR(rightTabFocus)): {
                             private _control = (_display displayCtrl IDC_rightTabContent);
-                            _control lbData (lbCurSel _control)
+                            private _selection = ["getCurSel", _control, []] call FUNC(controlInterface);
+                            ["getData", _control, [_selection]] call FUNC(controlInterface)
                         };
                         case (GVAR(rightTabLnBFocus)): {
                             private _control = (_display displayCtrl IDC_rightTabContentListnBox);
-                            _control lnbData [lnbCurSelRow _control, 0]
+                            private _selection = ["getCurSel", _control, []] call FUNC(controlInterface);
+                            ["getData", _control, [_selection]] call FUNC(controlInterface)
                         };
-                    } params ["_className"];
+                        default { "" };
+                    };
 
                     "ace" callExtension ["clipboard:append", [_className]];
                     "ace" callExtension ["clipboard:complete", []];
@@ -105,20 +109,24 @@ if (!isNull _loadoutsDisplay) then {
             // Export Parent
             case (_keyPressed == DIK_P && {_ctrlState}): {
                 if !(GVAR(leftTabFocus) || {GVAR(rightTabFocus)} || {GVAR(rightTabLnBFocus)}) exitWith {};
-                switch (true) do {
+                private _className = switch (true) do {
                     case (GVAR(leftTabFocus)): {
                         private _control = (_display displayCtrl IDC_leftTabContent);
-                        _control lbData (lbCurSel _control)
+                        private _selection = ["getCurSel", _control, []] call FUNC(controlInterface);
+                        ["getData", _control, [_selection]] call FUNC(controlInterface)
                     };
                     case (GVAR(rightTabFocus)): {
                         private _control = (_display displayCtrl IDC_rightTabContent);
-                        _control lbData (lbCurSel _control)
+                        private _selection = ["getCurSel", _control, []] call FUNC(controlInterface);
+                        ["getData", _control, [_selection]] call FUNC(controlInterface)
                     };
                     case (GVAR(rightTabLnBFocus)): {
                         private _control = (_display displayCtrl IDC_rightTabContentListnBox);
-                        _control lnbData [lnbCurSelRow _control, 0]
+                        private _selection = ["getCurSel", _control, []] call FUNC(controlInterface);
+                        ["getData", _control, [_selection]] call FUNC(controlInterface)
                     };
-                } params ["_className"];
+                    default { "" };
+                };
 
                 private _cfgConfig = if (GVAR(leftTabFocus)) then {
                     switch (GVAR(currentLeftPanel)) do {
