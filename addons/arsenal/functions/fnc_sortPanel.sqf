@@ -128,6 +128,7 @@ private _insigniaCache = uiNamespace getVariable QGVAR(insigniaCache);
 private _displayNameCache = uiNamespace getVariable [QGVAR(treeOriginalDisplayNameCache), createHashMap];
 
 private _emptyEntries = [];
+private _flatEntries = [];
 private _groupEntries = [];
 
 // Build a transient representation of the tree
@@ -153,93 +154,111 @@ for "_groupIndex" from 0 to ((_panel tvCount []) - 1) do {
 
         _groupEntries pushBack [_groupLabel, _leaves];
     } else {
-        _emptyEntries pushBack [
+        private _entry = [
             _panel tvData _groupPath,
             _panel tvText _groupPath,
             _panel tvPicture _groupPath,
             _panel tvTooltip _groupPath,
-            [1, 1, 1, 1],
-            _panel tvValue _groupPath
+            [[1, 1, 1, 1], FAVORITES_COLOR] select ((toLowerANSI (_panel tvData _groupPath)) in GVAR(favorites)),
+            _panel tvValue _groupPath,
+            ""
         ];
+
+        if ((_entry select 0) == "") then {
+            _emptyEntries pushBack _entry;
+        } else {
+            _flatEntries pushBack _entry;
+        };
     };
+};
+
+private _fnc_setSortKey = {
+    params ["_entry"];
+    _entry params ["_item", "_nodeText", "", "", "", "_nodeValue"];
+
+    // Get item and item's count
+    private _quantity = [0, _nodeValue] select _right;
+
+    // "Misc. items" magazines (e.g. spare barrels, intel, photos)
+    private _itemCfgClass = _cfgClass;
+    if (_item in _magazineMiscItems) then {
+        _itemCfgClass = _cfgMagazines;
+    };
+
+    // Check item's config
+    _itemCfg = if !(_itemCfgClass in [_cfgFaces, _cfgUnitInsignia]) then {
+        _itemCfgClass >> _item
+    } else {
+        // If insignia, check for correct config: First mission, then campaign and finally regular config
+        if (_itemCfgClass == _cfgUnitInsignia) then {
+            _itemCfg = _cfgUnitInsigniaMission >> _item;
+
+            if (isNull _itemCfg) then {
+                _itemCfg = _cfgUnitInsigniaCampaign >> _item;
+            };
+
+            if (isNull _itemCfg) then {
+                _itemCfg = _cfgUnitInsignia >> _item;
+            };
+
+            _itemCfg
+        } else {
+            // If face, check correct category
+            _itemCfgClass >> (_faceCache getOrDefault [_item, []]) param [2, "Man_A3"] >> _item
+        };
+    };
+
+    // Some items may not belong to the config class for the panel (e.g. misc. items panel can have unique items)
+    if (isNull _itemCfg) then {
+        _itemCfg = _item call CBA_fnc_getItemConfig;
+    };
+
+    // Value can be any type
+    _value = _sortCache getOrDefaultCall [format ["%1_%2_%3", _sortName, _item, _quantity], {
+        private _value = [_itemCfg, _item, _quantity] call _statement;
+
+        // If number, convert to string (keep 2 decimal after comma; Needed for correct weight sorting)
+        if (_value isEqualType 0) then {
+            _value = [_value, 8, 2] call CBA_fnc_formatNumber;
+        };
+
+        // If empty string, add alphabetically small char at beginning to make it sort correctly
+        if (_value isEqualTo "") then {
+            _value = "_";
+        };
+
+        _value
+    }, true];
+
+    // Set the sort key temporarily, so it can be used for sorting
+    private _displayNameForSort = _nodeText;
+    if (_right) then {
+        private _cacheKey = format ["%1|%2", GVAR(currentRightPanel), toLowerANSI _item];
+        _displayNameForSort = _displayNameCache getOrDefault [_cacheKey, _nodeText];
+    };
+
+    // Use value, display name and classname to sort, which means a fixed alphabetical order is guaranteed
+    // Filler char has lowest lexicographical value possible
+    _entry set [6, format ["%1%2%4%3", _value, _displayNameForSort, _item, _fillerChar]];
 };
 
 {
     _x params ["_groupLabel", "_leaves"];
 
     {
-        _x params ["_item", "_nodeText", "", "", "", "_nodeValue"];
-
-        // Get item and item's count
-        private _quantity = [0, _nodeValue] select _right;
-
-        // "Misc. items" magazines (e.g. spare barrels, intel, photos)
-        private _itemCfgClass = _cfgClass;
-        if (_item in _magazineMiscItems) then {
-            _itemCfgClass = _cfgMagazines;
-        };
-
-        // Check item's config
-        _itemCfg = if !(_itemCfgClass in [_cfgFaces, _cfgUnitInsignia]) then {
-            _itemCfgClass >> _item
-        } else {
-            // If insignia, check for correct config: First mission, then campaign and finally regular config
-            if (_itemCfgClass == _cfgUnitInsignia) then {
-                _itemCfg = _cfgUnitInsigniaMission >> _item;
-
-                if (isNull _itemCfg) then {
-                    _itemCfg = _cfgUnitInsigniaCampaign >> _item;
-                };
-
-                if (isNull _itemCfg) then {
-                    _itemCfg = _cfgUnitInsignia >> _item;
-                };
-
-                _itemCfg
-            } else {
-                // If face, check correct category
-                _itemCfgClass >> (_faceCache getOrDefault [_item, []]) param [2, "Man_A3"] >> _item
-            };
-        };
-
-        // Some items may not belong to the config class for the panel (e.g. misc. items panel can have unique items)
-        if (isNull _itemCfg) then {
-            _itemCfg = _item call CBA_fnc_getItemConfig;
-        };
-
-        // Value can be any type
-        _value = _sortCache getOrDefaultCall [format ["%1_%2_%3", _sortName, _item, _quantity], {
-            private _value = [_itemCfg, _item, _quantity] call _statement;
-
-            // If number, convert to string (keep 2 decimal after comma; Needed for correct weight sorting)
-            if (_value isEqualType 0) then {
-                _value = [_value, 8, 2] call CBA_fnc_formatNumber;
-            };
-
-            // If empty string, add alphabetically small char at beginning to make it sort correctly
-            if (_value isEqualTo "") then {
-                _value = "_";
-            };
-
-            _value
-        }, true];
-
-        // Set the sort key temporarily, so it can be used for sorting
-        private _displayNameForSort = _nodeText;
-        if (_right) then {
-            private _cacheKey = format ["%1|%2", GVAR(currentRightPanel), toLowerANSI _item];
-            _displayNameForSort = _displayNameCache getOrDefault [_cacheKey, _nodeText];
-        };
-
-        // Use value, display name and classname to sort, which means a fixed alphabetical order is guaranteed
-        // Filler char has lowest lexicographical value possible
-        _x set [6, format ["%1%2%4%3", _value, _displayNameForSort, _item, _fillerChar]];
+        [_x] call _fnc_setSortKey;
     } forEach _leaves;
 
     _leaves sort (_sortDirection == ASCENDING);
 } forEach _groupEntries;
 
-// Sort alphabetically, rebuild tree, and select the previously selected item again
+{
+    [_x] call _fnc_setSortKey;
+} forEach _flatEntries;
+
+_flatEntries sort (_sortDirection == ASCENDING);
+
+// Sort groups alphabetically, then rebuild tree and select the previously selected item again
 _groupEntries sort true;
 
 tvClear _panel;
@@ -260,6 +279,23 @@ tvClear _panel;
         _panel tvSetColor [_path, _color];
     };
 } forEach _emptyEntries;
+
+{
+    _x params ["_item", "_text", "_picture", "_tooltip", "_color", "_nodeValue"];
+
+    private _path = [_panel tvAdd [[], _text]];
+    _panel tvSetData [_path, _item];
+    _panel tvSetValue [_path, _nodeValue];
+    _panel tvSetTooltip [_path, _tooltip];
+
+    if (_picture != "") then {
+        _panel tvSetPicture [_path, _picture];
+    };
+
+    if (_color isNotEqualTo []) then {
+        _panel tvSetColor [_path, _color];
+    };
+} forEach _flatEntries;
 
 {
     _x params ["_groupLabel", "_leaves"];

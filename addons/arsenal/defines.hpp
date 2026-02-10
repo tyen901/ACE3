@@ -25,6 +25,11 @@
 #define ASCENDING 0
 #define DESCENDING 1
 
+// Grouping
+#define GROUP_BY_OFF 0
+#define GROUP_BY_FIRST_LETTER 1
+#define GROUP_BY_MOD 2
+
 // Favorites
 #define FAVORITES_COLOR (GVAR(favoritesColor) + [1])
 
@@ -68,8 +73,10 @@
 #define IDC_rightTabContent 14
 #define IDC_sortLeftTab 16
 #define IDC_sortLeftTabDirection 161
+#define IDC_groupLeftTab 162
 #define IDC_sortRightTab 17
 #define IDC_sortRightTabDirection 171
+#define IDC_groupRightTab 172
 #define IDC_leftSearchbar 18
 #define IDC_leftSearchbarButton 41
 #define IDC_rightSearchbar 19
@@ -341,6 +348,7 @@
     IDC_rightTabContent,\
     IDC_sortRightTab,\
     IDC_sortRightTabDirection,\
+    IDC_groupRightTab,\
     RIGHT_PANEL_ACC_IDCS,\
     IDC_rightSearchbar,\
     IDC_rightSearchbarButton,\
@@ -374,9 +382,9 @@ _buttonCurrentMag2Ctrl ctrlCommit FADE_DELAY;\
     _x = _display displayCtrl _x;\
     _x ctrlSetPosition [\
         safeZoneX + safeZoneW - 93 * GRID_W,\
-        safeZoneY + 14 * GRID_H,\
+        safeZoneY + 20 * GRID_H,\
         80 * GRID_W,\
-        safeZoneH - 28 * GRID_H\
+        safeZoneH - 34 * GRID_H\
     ];\
     _x ctrlCommit 0;\
 } forEach [\
@@ -399,6 +407,7 @@ _buttonCurrentMag2Ctrl ctrlCommit FADE_DELAY;\
     IDC_rightTabContent,\
     IDC_sortRightTab,\
     IDC_sortRightTabDirection,\
+    IDC_groupRightTab,\
     RIGHT_PANEL_ACC_IDCS,\
     RIGHT_PANEL_ITEMS_IDCS,\
     IDC_rightSearchbar,\
@@ -427,9 +436,9 @@ _buttonCurrentMag2Ctrl ctrlCommit FADE_DELAY;\
     _x = _display displayCtrl _x;\
     _x ctrlSetPosition [\
         safeZoneX + safeZoneW - 93 * GRID_W,\
-        safeZoneY + 14 * GRID_H,\
+        safeZoneY + 20 * GRID_H,\
         80 * GRID_W,\
-        safeZoneH - 34 * GRID_H\
+        safeZoneH - 40 * GRID_H\
     ];\
     _x ctrlCommit 0;\
 } forEach [\
@@ -488,6 +497,7 @@ if (!isNil QGVAR(customRightPanelButtons)) then {\
     IDC_rightTabContent,\
     IDC_sortRightTab,\
     IDC_sortRightTabDirection,\
+    IDC_groupRightTab,\
     RIGHT_PANEL_ACC_BACKGROUND_IDCS,\
     RIGHT_PANEL_ACC_IDCS,\
     RIGHT_PANEL_ITEMS_BACKGROUND_IDCS,\

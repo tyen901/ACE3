@@ -59,28 +59,28 @@ class GVAR(display) {
         class blockLeftFrame: RscFrame {
             idc = IDC_blockLeftFrame;
             x = QUOTE(safeZoneX + 13 * GRID_W);
-            y = QUOTE(safeZoneY + 14 * GRID_H);
+            y = QUOTE(safeZoneY + 20 * GRID_H);
             w = QUOTE(80 * GRID_W);
-            h = QUOTE(safeZoneH - 24 * GRID_H);
+            h = QUOTE(safeZoneH - 30 * GRID_H);
             colorText[] = {0,0,0,1};
         };
         class blockLeftBackground: ctrlStaticBackground {
             idc = IDC_blockLeftBackground;
             x = QUOTE(safeZoneX + 13 * GRID_W);
-            y = QUOTE(safeZoneY + 14 * GRID_H);
+            y = QUOTE(safeZoneY + 20 * GRID_H);
             w = QUOTE(80 * GRID_W);
-            h = QUOTE(safeZoneH - 24 * GRID_H);
+            h = QUOTE(safeZoneH - 30 * GRID_H);
             colorBackground[] = {0,0,0,0.5};
         };
         class blockRightFrame: blockLeftFrame {
             idc = IDC_blockRightFrame;
             x = QUOTE(safeZoneX + safeZoneW - 93 * GRID_W);
-            h = QUOTE(safeZoneH - 34 * GRID_H);
+            h = QUOTE(safeZoneH - 40 * GRID_H);
         };
         class blockRighttBackground: blockLeftBackground {
             idc = IDC_blockRighttBackground;
             x = QUOTE(safeZoneX + safeZoneW - 93 * GRID_W);
-            h = QUOTE(safeZoneH - 34 * GRID_H);
+            h = QUOTE(safeZoneH - 40 * GRID_H);
         };
         class loadIndicator: RscControlsGroupNoScrollbars {
             idc = IDC_loadIndicator;
@@ -572,9 +572,9 @@ class GVAR(display) {
             onSetFocus = QUOTE(GVAR(leftTabFocus) = true);
             onKillFocus = QUOTE(GVAR(leftTabFocus) = false);
             x = QUOTE(safeZoneX + 13 * GRID_W);
-            y = QUOTE(safeZoneY + 14 * GRID_H);
+            y = QUOTE(safeZoneY + 20 * GRID_H);
             w = QUOTE(80 * GRID_W);
-            h = QUOTE(safeZoneH - 24.5 * GRID_H);
+            h = QUOTE(safeZoneH - 30.5 * GRID_H);
             sizeEx = QUOTE(7 * GRID_H);
         };
         class rightTabContent: leftTabContent {
@@ -584,7 +584,7 @@ class GVAR(display) {
             onSetFocus = QUOTE(GVAR(rightTabFocus) = true);
             onKillFocus = QUOTE(GVAR(rightTabFocus) = false);
             x = QUOTE(safeZoneX + safeZoneW - 93 * GRID_W);
-            h = QUOTE(safeZoneH - 28 * GRID_H);
+            h = QUOTE(safeZoneH - 34 * GRID_H);
         };
         class sortLeftTab: RscCombo {
             idc = IDC_sortLeftTab;
@@ -607,6 +607,16 @@ class GVAR(display) {
         class sortRightTabDirection: sortLeftTabDirection {
             idc = IDC_sortRightTabDirection;
             x = QUOTE(safeZoneX + safeZoneW - 53 * GRID_W);
+        };
+        class groupLeftTab: sortLeftTab {
+            idc = IDC_groupLeftTab;
+            y = QUOTE(safeZoneY + 14 * GRID_H);
+            w = QUOTE(80 * GRID_W);
+            onLBSelChanged = QUOTE(call FUNC(groupPanel));
+        };
+        class groupRightTab: groupLeftTab {
+            idc = IDC_groupRightTab;
+            x = QUOTE(safeZoneX + safeZoneW - 93 * GRID_W);
         };
         class leftSearchbar: ctrlEdit {
             idc = IDC_leftSearchbar;

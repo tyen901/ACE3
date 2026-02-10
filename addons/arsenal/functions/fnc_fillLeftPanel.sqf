@@ -190,7 +190,10 @@ if (_idxVirt != -1) then {
 
 uiNamespace setVariable [QGVAR(treeOriginalDisplayNameCache), _originalNameCache];
 
-[_ctrlPanel, _entries] call FUNC(fillLeftPanelGrouped);
+private _groupByMode = missionNamespace getVariable [QGVAR(lastGroupByLeftMode), GROUP_BY_OFF];
+[_ctrlPanel, _entries, true, _groupByMode] call FUNC(fillLeftPanelGrouped);
+
+[_display, _display displayCtrl IDC_groupLeftTab] call FUNC(fillGroupBy);
 
 // Trigger event
 [QGVAR(leftPanelFilled), [_display, _ctrlIDC, GVAR(currentRightPanel)]] call CBA_fnc_localEvent;

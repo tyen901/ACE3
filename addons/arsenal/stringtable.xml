@@ -1412,6 +1412,15 @@
             <Turkish>ACE Arsenal</Turkish>
             <Ukrainian>ACE Арсенал</Ukrainian>
         </Key>
+        <Key ID="STR_ACE_Arsenal_groupByOff">
+            <English>Off</English>
+        </Key>
+        <Key ID="STR_ACE_Arsenal_groupByFirstLetter">
+            <English>By first letter</English>
+        </Key>
+        <Key ID="STR_ACE_Arsenal_groupByMod">
+            <English>By mod</English>
+        </Key>
         <Key ID="STR_ACE_Arsenal_sortAscending">
             <English>Ascending</English>
             <French>Croissant</French>

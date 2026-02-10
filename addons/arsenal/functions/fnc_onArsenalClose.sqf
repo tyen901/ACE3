@@ -102,6 +102,7 @@ GVAR(shiftState) = nil;
 GVAR(leftTabFocus) = nil;
 GVAR(rightTabFocus) = nil;
 GVAR(ignoreFirstSortPanelCall) = nil;
+GVAR(ignoreFirstGroupPanelCall) = nil;
 GVAR(refreshing) = nil;
 
 uiNamespace setVariable [QGVAR(treeGroupNameCache), nil];

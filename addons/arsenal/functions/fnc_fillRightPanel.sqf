@@ -449,7 +449,8 @@ if (_isContainer) then {
     } forEach _entries;
 };
 
-[_ctrlPanel, _entries] call FUNC(fillLeftPanelGrouped);
+private _groupByMode = missionNamespace getVariable [QGVAR(lastGroupByRightMode), GROUP_BY_OFF];
+[_ctrlPanel, _entries, true, _groupByMode] call FUNC(fillLeftPanelGrouped);
 
 // When switching tabs, clear searchbox
 if (GVAR(currentRightPanel) != _ctrlIDC) then {
@@ -459,6 +460,7 @@ if (GVAR(currentRightPanel) != _ctrlIDC) then {
 GVAR(currentRightPanel) = _ctrlIDC;
 uiNamespace setVariable [QGVAR(treeOriginalDisplayNameCache), _originalNameCache];
 uiNamespace setVariable [QGVAR(treeRightItemMetaCache), _rightMetaCache];
+[_display, _display displayCtrl IDC_groupRightTab] call FUNC(fillGroupBy);
 
 // Trigger event
 [QGVAR(rightPanelFilled), [_display, GVAR(currentLeftPanel), _ctrlIDC]] call CBA_fnc_localEvent;

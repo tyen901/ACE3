@@ -11,6 +11,8 @@ GVAR(lastSortLeft) = "";
 GVAR(lastSortRight) = "";
 GVAR(lastSortDirectionLeft) = DESCENDING;
 GVAR(lastSortDirectionRight) = DESCENDING;
+GVAR(lastGroupByLeftMode) = GROUP_BY_OFF;
+GVAR(lastGroupByRightMode) = GROUP_BY_OFF;
 
 [QGVAR(initBox), LINKFUNC(initBox)] call CBA_fnc_addEventHandler;
 [QGVAR(removeBox), LINKFUNC(removeBox)] call CBA_fnc_addEventHandler;

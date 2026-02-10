@@ -108,6 +108,7 @@ _mouseBlockCtrl ctrlEnable false;
     IDC_loadIndicator,
     IDC_rightTabContent,
     IDC_sortRightTab,
+    IDC_groupRightTab,
     RIGHT_PANEL_ACC_BACKGROUND_IDCS,
     RIGHT_PANEL_ACC_IDCS,
     RIGHT_PANEL_ITEMS_BACKGROUND_IDCS,
@@ -225,6 +226,7 @@ GVAR(liveUpdateSearch) = false;
 GVAR(leftTabFocus) = false;
 GVAR(rightTabFocus) = false;
 GVAR(ignoreFirstSortPanelCall) = false;
+GVAR(ignoreFirstGroupPanelCall) = false;
 GVAR(refreshing) = false;
 
 uiNamespace setVariable [QGVAR(treeGroupNameCache), createHashMap];
