@@ -2,7 +2,7 @@
 #include "..\defines.hpp"
 /*
  * Author: Alganthe, johnb43
- * Update the right panel (listnbox).
+ * Update the right panel (listnbox/tree).
  *
  * Arguments:
  * 0: Right panel control <CONTROL>
@@ -17,21 +17,17 @@
 
 params ["_control", "_container", "_hasItems"];
 
-private _item = "";
-private _color = [];
-private _alpha = 1;
+private _metaCache = uiNamespace getVariable [QGVAR(treeRightItemMetaCache), createHashMap];
 
 // Grey out items that are too big to fit in remaining space of the container
-for "_row" from 0 to (lnbSize _control select 0) - 1 do {
-    _item = _control lnbData [_row, 0];
-    _color = _control lnbColor [_row, 1];
+{
+    private _item = _control tvData _x;
+    private _color = [[1, 1, 1, 1], FAVORITES_COLOR] select ((toLowerANSI _item) in GVAR(favorites));
 
-    // Lower alpha on color for items that can't fit
-    _alpha = [0.25, 1] select (_container canAdd _item);
+    private _alpha = [0.25, 1] select (_container canAdd _item);
     _color set [3, _alpha];
-    _control lnbSetColor [[_row, 1], _color];
-    _control lnbSetColor [[_row, 2], [1, 1, 1, _alpha]];
-};
+    _control tvSetColor [_x, _color];
+} forEach (["collectLeafPaths", [_control, false]] call FUNC(treeControlInterface));
 
 private _display = ctrlParent _control;
 
@@ -47,11 +43,22 @@ _removeAllCtrl ctrlCommit FADE_DELAY;
 // Update weight display
 (_display displayCtrl IDC_totalWeightText) ctrlSetText (format ["%1 (%2)", GVAR(center) call EFUNC(common,getWeight), [GVAR(center), 1] call EFUNC(common,getWeight)]);
 
-private _curSel = lnbCurSelRow _control;
+(["getSelectedLeaf", [_control]] call FUNC(treeControlInterface)) params ["", "_item"];
 
-// Disable '+' button if item is unique or too big to fit in remaining space
-if (_curSel != -1) then {
-    private _plusButtonCtrl = _display displayCtrl IDC_arrowPlus;
-    _plusButtonCtrl ctrlEnable ((_control lnbValue [_curSel, 2]) != 1 && {_container canAdd (_control lnbData [_curSel, 0])});
-    _plusButtonCtrl ctrlCommit FADE_DELAY;
+private _plusButtonCtrl = _display displayCtrl IDC_arrowPlus;
+private _minusButtonCtrl = _display displayCtrl IDC_arrowMinus;
+
+if (_item != "") then {
+    private _cacheKey = format ["%1|%2", GVAR(currentRightPanel), toLowerANSI _item];
+    private _isUnique = (_metaCache getOrDefault [_cacheKey, [false]]) param [0, false];
+
+    // Disable '+' button if item is unique or too big to fit in remaining space
+    _plusButtonCtrl ctrlEnable (!_isUnique && {_container canAdd _item});
+    _minusButtonCtrl ctrlEnable true;
+} else {
+    _plusButtonCtrl ctrlEnable false;
+    _minusButtonCtrl ctrlEnable false;
 };
+
+_plusButtonCtrl ctrlCommit FADE_DELAY;
+_minusButtonCtrl ctrlCommit FADE_DELAY;

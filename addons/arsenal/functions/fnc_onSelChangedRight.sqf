@@ -6,7 +6,7 @@
  *
  * Arguments:
  * 0: Right panel control <CONTROL>
- * 1: Right panel selection <NUMBER>
+ * 1: Right panel selection path <ARRAY>
  *
  * Return Value:
  * None
@@ -14,12 +14,50 @@
  * Public: No
 */
 
-params ["_control", "_curSel"];
+params ["_control", "_path"];
 
-if (_curSel < 0) exitWith {};
+if (_path isEqualTo []) exitWith {};
+if (["isGroupPath", [_control, _path]] call FUNC(treeControlInterface)) exitWith {};
 
 private _display = ctrlParent _control;
-private _item = _control lbData _curSel;
+private _item = _control tvData _path;
+
+if (GVAR(currentLeftPanel) in [IDC_buttonUniform, IDC_buttonVest, IDC_buttonBackpack]) exitWith {
+    private _hasItems = false;
+
+    private _container = switch (GVAR(currentLeftPanel)) do {
+        case IDC_buttonUniform: {
+            _hasItems = (GVAR(currentItems) select IDX_CURR_UNIFORM_ITEMS) isNotEqualTo [];
+            uniformContainer GVAR(center)
+        };
+        case IDC_buttonVest: {
+            _hasItems = (GVAR(currentItems) select IDX_CURR_VEST_ITEMS) isNotEqualTo [];
+            vestContainer GVAR(center)
+        };
+        case IDC_buttonBackpack: {
+            _hasItems = (GVAR(currentItems) select IDX_CURR_BACKPACK_ITEMS) isNotEqualTo [];
+            backpackContainer GVAR(center)
+        };
+    };
+
+    // Refresh availability of items based on space remaining in container
+    [_control, _container, _hasItems] call FUNC(updateRightPanel);
+
+    private _cfgEntry = ["CfgWeapons", "CfgMagazines"] select (
+        GVAR(currentRightPanel) in [IDC_buttonMag, IDC_buttonMagALL, IDC_buttonThrow, IDC_buttonPut] ||
+        {_item in (uiNamespace getVariable [QGVAR(magazineMiscItems), []])}
+    );
+
+    _cfgEntry = configFile >> _cfgEntry >> _item;
+
+    // If e.g. in misc. items, item could be e.g. a backpack
+    if (isNull _cfgEntry) then {
+        _cfgEntry = _item call CBA_fnc_getItemConfig;
+    };
+
+    [ctrlParent _control, _control, _path, _cfgEntry] call FUNC(itemInfo);
+};
+
 private _currentItemsIndex = IDX_CURR_PRIMARY_WEAPON_ITEMS + ([IDC_buttonPrimaryWeapon, IDC_buttonSecondaryWeapon, IDC_buttonHandgun, IDC_buttonBinoculars] find GVAR(currentLeftPanel));
 private _itemIndex = [IDC_buttonMuzzle, IDC_buttonItemAcc, IDC_buttonOptic, IDC_buttonBipod, IDC_buttonCurrentMag, IDC_buttonCurrentMag2] find GVAR(currentRightPanel);
 
@@ -37,7 +75,6 @@ switch (_currentItemsIndex) do {
                 // Remove both magazines
                 GVAR(center) removePrimaryWeaponItem _secondaryMagazine;
                 GVAR(center) removePrimaryWeaponItem _secondaryMagazine;
-
                 // Add magazine back into primary muzzle
                 GVAR(center) addWeaponItem [primaryWeapon GVAR(center), _secondaryMagazine, true];
             } else {
@@ -49,7 +86,6 @@ switch (_currentItemsIndex) do {
                 // If magazine, make sure to add to correct muzzle
                 if (_itemIndex >= 4) then {
                     private _weapon = primaryWeapon GVAR(center);
-
                     GVAR(center) addWeaponItem [_weapon, [_item, nil, (_weapon call CBA_fnc_getMuzzles) param [_itemIndex - 4, ""]], true];
                 } else {
                     GVAR(center) addWeaponItem [primaryWeapon GVAR(center), _item, true];
@@ -64,14 +100,14 @@ switch (_currentItemsIndex) do {
         (getUnitLoadout GVAR(center) select IDX_LOADOUT_PRIMARY_WEAPON) params ["", "_muzzle", "_flashlight", "_optics", "_primaryMagazine", "_secondaryMagazine", "_bipod"];
         GVAR(currentItems) set [IDX_CURR_PRIMARY_WEAPON_ITEMS, [_muzzle, _flashlight, _optics, _bipod, _primaryMagazine param [0, ""], _secondaryMagazine param [0, ""]]];
 
-        [_display, _control, _curSel, configFile >> ["CfgWeapons", "CfgMagazines"] select (_itemIndex >= 4) >> _item] call FUNC(itemInfo);
+        [_display, _control, _path, configFile >> ["CfgWeapons", "CfgMagazines"] select (_itemIndex >= 4) >> _item] call FUNC(itemInfo);
     };
     // Secondary weapon
     case IDX_CURR_SECONDARY_WEAPON_ITEMS: {
         private _currentItemInSlot = (GVAR(currentItems) select IDX_CURR_SECONDARY_WEAPON_ITEMS) select _itemIndex;
         private _isDisposable = CBA_disposable_replaceDisposableLauncher && {!isNil "CBA_disposable_loadedLaunchers"} &&
             {
-                if (CBA_disposable_loadedLaunchers isEqualType createHashMap) then { // after CBA 3.18
+                if (CBA_disposable_loadedLaunchers isEqualType createHashMap) then {
                     (secondaryWeapon GVAR(center)) in CBA_disposable_loadedLaunchers
                 } else {
                     !isNil {CBA_disposable_loadedLaunchers getVariable (secondaryWeapon player)}
@@ -86,13 +122,11 @@ switch (_currentItemsIndex) do {
             };
 
             private _secondaryMagazine = (GVAR(currentItems) select IDX_CURR_SECONDARY_WEAPON_ITEMS) select 5;
-
             // If secondary magazine, make sure to remove from correct muzzle
             if (_itemIndex == 5 && {_secondaryMagazine != ""} && {((GVAR(currentItems) select IDX_CURR_SECONDARY_WEAPON_ITEMS) select 4) == _secondaryMagazine}) then {
                 // Remove both magazines
                 GVAR(center) removeSecondaryWeaponItem _secondaryMagazine;
                 GVAR(center) removeSecondaryWeaponItem _secondaryMagazine;
-
                 // Add magazine back into primary muzzle
                 GVAR(center) addWeaponItem [secondaryWeapon GVAR(center), _secondaryMagazine, true];
             } else {
@@ -104,7 +138,6 @@ switch (_currentItemsIndex) do {
                 // If magazine, make sure to add to correct muzzle
                 if (_itemIndex >= 4) then {
                     private _weapon = secondaryWeapon GVAR(center);
-
                     GVAR(center) addWeaponItem [_weapon, [_item, nil, (_weapon call CBA_fnc_getMuzzles) param [_itemIndex - 4, ""]], true];
                 } else {
                     GVAR(center) addWeaponItem [secondaryWeapon GVAR(center), _item, true];
@@ -115,13 +148,13 @@ switch (_currentItemsIndex) do {
         // Call event for compatibility
         [QGVAR(weaponItemChanged), [secondaryWeapon GVAR(center), _item, _itemIndex]] call CBA_fnc_localEvent;
 
-        // Update currentItems
         if !(_isDisposable && {_itemIndex >= 4}) then {
+            // Update currentItems
             (getUnitLoadout GVAR(center) select IDX_LOADOUT_SECONDARY_WEAPON) params ["", "_muzzle", "_flashlight", "_optics", "_primaryMagazine", "_secondaryMagazine", "_bipod"];
             GVAR(currentItems) set [IDX_CURR_SECONDARY_WEAPON_ITEMS, [_muzzle, _flashlight, _optics, _bipod, _primaryMagazine param [0, ""], _secondaryMagazine param [0, ""]]];
         };
 
-        [_display, _control, _curSel, configFile >> ["CfgWeapons", "CfgMagazines"] select (_itemIndex >= 4) >> _item] call FUNC(itemInfo);
+        [_display, _control, _path, configFile >> ["CfgWeapons", "CfgMagazines"] select (_itemIndex >= 4) >> _item] call FUNC(itemInfo);
     };
     // Handgun weapon
     case IDX_CURR_HANDGUN_WEAPON_ITEMS: {
@@ -134,7 +167,6 @@ switch (_currentItemsIndex) do {
                 // Remove both magazines
                 GVAR(center) removeHandgunItem _secondaryMagazine;
                 GVAR(center) removeHandgunItem _secondaryMagazine;
-
                 // Add magazine back into primary muzzle
                 GVAR(center) addWeaponItem [handgunWeapon GVAR(center), _secondaryMagazine, true];
             } else {
@@ -146,7 +178,6 @@ switch (_currentItemsIndex) do {
                 // If magazine, make sure to add to correct muzzle
                 if (_itemIndex >= 4) then {
                     private _weapon = handgunWeapon GVAR(center);
-
                     GVAR(center) addWeaponItem [_weapon, [_item, nil, (_weapon call CBA_fnc_getMuzzles) param [_itemIndex - 4, ""]], true];
                 } else {
                     GVAR(center) addWeaponItem [handgunWeapon GVAR(center), _item, true];
@@ -161,7 +192,7 @@ switch (_currentItemsIndex) do {
         (getUnitLoadout GVAR(center) select IDX_LOADOUT_HANDGUN_WEAPON) params ["", "_muzzle", "_flashlight", "_optics", "_primaryMagazine", "_secondaryMagazine", "_bipod"];
         GVAR(currentItems) set [IDX_CURR_HANDGUN_WEAPON_ITEMS, [_muzzle, _flashlight, _optics, _bipod, _primaryMagazine param [0, ""], _secondaryMagazine param [0, ""]]];
 
-        [_display, _control, _curSel, configFile >> ["CfgWeapons", "CfgMagazines"] select (_itemIndex >= 4) >> _item] call FUNC(itemInfo);
+        [_display, _control, _path, configFile >> ["CfgWeapons", "CfgMagazines"] select (_itemIndex >= 4) >> _item] call FUNC(itemInfo);
     };
     // Binoculars
     case IDX_CURR_BINO_ITEMS: {
@@ -174,7 +205,6 @@ switch (_currentItemsIndex) do {
                 // Remove both magazines
                 GVAR(center) removeBinocularItem _secondaryMagazine;
                 GVAR(center) removeBinocularItem _secondaryMagazine;
-
                 // Add magazine back into primary muzzle
                 GVAR(center) addWeaponItem [binocular GVAR(center), _secondaryMagazine, true];
             } else {
@@ -186,7 +216,6 @@ switch (_currentItemsIndex) do {
                 // If magazine, make sure to add to correct muzzle
                 if (_itemIndex >= 4) then {
                     private _weapon = binocular GVAR(center);
-
                     GVAR(center) addWeaponItem [_weapon, [_item, nil, (_weapon call CBA_fnc_getMuzzles) param [_itemIndex - 4, ""]], true];
                 } else {
                     GVAR(center) addWeaponItem [binocular GVAR(center), _item, true];
@@ -201,7 +230,7 @@ switch (_currentItemsIndex) do {
         (getUnitLoadout GVAR(center) select IDX_LOADOUT_BINO) params ["", "_muzzle", "_flashlight", "_optics", "_primaryMagazine", "_secondaryMagazine", "_bipod"];
         GVAR(currentItems) set [IDX_CURR_BINO_ITEMS, [_muzzle, _flashlight, _optics, _bipod, _primaryMagazine param [0, ""], _secondaryMagazine param [0, ""]]];
 
-        [_display, _control, _curSel, configFile >> ["CfgWeapons", "CfgMagazines"] select (_itemIndex >= 4) >> _item] call FUNC(itemInfo);
+        [_display, _control, _path, configFile >> ["CfgWeapons", "CfgMagazines"] select (_itemIndex >= 4) >> _item] call FUNC(itemInfo);
     };
 };
 

@@ -107,14 +107,14 @@ _mouseBlockCtrl ctrlEnable false;
     IDC_blockRighttBackground,
     IDC_loadIndicator,
     IDC_rightTabContent,
-    IDC_rightTabContentListnBox,
     IDC_sortRightTab,
     RIGHT_PANEL_ACC_BACKGROUND_IDCS,
     RIGHT_PANEL_ACC_IDCS,
     RIGHT_PANEL_ITEMS_BACKGROUND_IDCS,
     RIGHT_PANEL_ITEMS_IDCS,
     IDC_buttonRemoveAll,
-    IDC_rightSearchbar
+    IDC_rightSearchbar,
+    ARROWS_IDCS
 ];
 
 // Handle stats
@@ -224,15 +224,20 @@ GVAR(rightSearchbarFocus) = false;
 GVAR(liveUpdateSearch) = false;
 GVAR(leftTabFocus) = false;
 GVAR(rightTabFocus) = false;
-GVAR(rightTabLnBFocus) = false;
 GVAR(ignoreFirstSortPanelCall) = false;
 GVAR(refreshing) = false;
+
+uiNamespace setVariable [QGVAR(treeGroupNameCache), createHashMap];
+uiNamespace setVariable [QGVAR(treeSortMetadataCache), createHashMap];
+uiNamespace setVariable [QGVAR(treeOriginalDisplayNameCache), createHashMap];
+uiNamespace setVariable [QGVAR(treeSortKeyCache), createHashMap];
+uiNamespace setVariable [QGVAR(treeRightItemMetaCache), createHashMap];
 
 {
     private _panel = _display displayCtrl _x;
     _panel ctrlSetFontHeight (GVAR(fontHeight) * GRID_H);
     _panel ctrlCommit 0;
-} forEach [IDC_leftTabContent, IDC_rightTabContent, IDC_rightTabContentListnBox];
+} forEach [IDC_leftTabContent, IDC_rightTabContent];
 
 // Open left panel for current weapon, do some math
 GVAR(selectedWeaponType) = [primaryWeapon GVAR(center), secondaryWeapon GVAR(center), handgunWeapon GVAR(center), binocular GVAR(center)] find (currentWeapon GVAR(center));

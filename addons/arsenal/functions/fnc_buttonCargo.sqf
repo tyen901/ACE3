@@ -17,16 +17,19 @@
 params ["_display", "_addOrRemove"];
 
 private _add = _addOrRemove > 0;
+private _ctrlTree = _display displayCtrl IDC_rightTabContent;
 
-private _ctrlList = _display displayCtrl IDC_rightTabContentListnBox;
-private _lnbCurSel = lnbCurSelRow _ctrlList;
-private _isUnique = (_ctrlList lnbValue [_lnbCurSel, 2]) == 1;
+(["getSelectedLeaf", [_ctrlTree]] call FUNC(treeControlInterface)) params ["_path", "_item"];
+if (_path isEqualTo [] || {_item == ""}) exitWith {};
+
+private _metaKey = format ["%1|%2", GVAR(currentRightPanel), toLowerANSI _item];
+private _meta = (uiNamespace getVariable [QGVAR(treeRightItemMetaCache), createHashMap]) getOrDefault [_metaKey, [false]];
+private _isUnique = _meta param [0, false];
 
 // If item is unique, don't allow adding more
 if (_add && {_isUnique}) exitWith {};
 
 private _containerItems = [];
-private _item = _ctrlList lnbData [_lnbCurSel, 0];
 
 // Update item count and currentItems array & get relevant container
 private _container = switch (GVAR(currentLeftPanel)) do {
@@ -49,10 +52,8 @@ private _container = switch (GVAR(currentLeftPanel)) do {
 
         // Get all items from container
         _containerItems = uniformItems GVAR(center);
-
         // Update currentItems
         GVAR(currentItems) set [IDX_CURR_UNIFORM_ITEMS, ((getUnitLoadout GVAR(center)) select IDX_LOADOUT_UNIFORM) param [1, []]];
-
         // Update load bar
         (_display displayCtrl IDC_loadIndicatorBar) progressSetPosition (loadUniform GVAR(center));
 
@@ -77,10 +78,8 @@ private _container = switch (GVAR(currentLeftPanel)) do {
 
         // Get all items from container
         _containerItems = vestItems GVAR(center);
-
         // Update currentItems
         GVAR(currentItems) set [IDX_CURR_VEST_ITEMS, ((getUnitLoadout GVAR(center)) select IDX_LOADOUT_VEST) param [1, []]];
-
         // Update load bar
         (_display displayCtrl IDC_loadIndicatorBar) progressSetPosition (loadVest GVAR(center));
 
@@ -105,10 +104,8 @@ private _container = switch (GVAR(currentLeftPanel)) do {
 
         // Get all items from container
         _containerItems = backpackItems GVAR(center);
-
         // Update currentItems
         GVAR(currentItems) set [IDX_CURR_BACKPACK_ITEMS, ((getUnitLoadout GVAR(center)) select IDX_LOADOUT_BACKPACK) param [1, []]];
-
         // Update load bar
         (_display displayCtrl IDC_loadIndicatorBar) progressSetPosition (loadBackpack GVAR(center));
 
@@ -116,10 +113,12 @@ private _container = switch (GVAR(currentLeftPanel)) do {
     };
 };
 
+private _baseNameCache = uiNamespace getVariable [QGVAR(treeOriginalDisplayNameCache), createHashMap];
+private _baseName = _baseNameCache getOrDefault [_metaKey, _ctrlTree tvText _path];
 // Find out how many items of that type there are and update the number displayed
-_ctrlList lnbSetText [[_lnbCurSel, 2], str ({_item == _x} count _containerItems)];
+["setLeafQuantityText", [_ctrlTree, _path, {_item == _x} count _containerItems, _baseName]] call FUNC(treeControlInterface);
 
 [QGVAR(cargoChanged), [_display, _item, _addOrRemove, GVAR(shiftState)]] call CBA_fnc_localEvent;
 
-// Refresh availibility of items based on space remaining in container
-[_ctrlList, _container, _containerItems isNotEqualTo []] call FUNC(updateRightPanel);
+// Refresh availability of items based on space remaining in container
+[_ctrlTree, _container, _containerItems isNotEqualTo []] call FUNC(updateRightPanel);

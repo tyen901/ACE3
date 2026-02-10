@@ -19,7 +19,7 @@ params ["_display", "_control", ["_animate", true]];
 
 // Fade old control background
 if (!isNil QGVAR(currentRightPanel)) then {
-    private _previousCtrlBackground  = _display displayCtrl (GVAR(currentRightPanel) - 1);
+    private _previousCtrlBackground = _display displayCtrl (GVAR(currentRightPanel) - 1);
     _previousCtrlBackground ctrlSetFade 1;
     _previousCtrlBackground ctrlCommit ([0, FADE_DELAY] select _animate);
 };
@@ -40,14 +40,90 @@ if (!(ctrlShown _searchbarCtrl) || {ctrlFade _searchbarCtrl > 0}) then {
     _searchbarCtrl ctrlCommit 0;
 };
 
+private _ctrlPanel = _display displayCtrl IDC_rightTabContent;
 private _cfgMagazines = configFile >> "CfgMagazines";
-private _cfgWeapons = configFile >> "CfgWeapons";
 private _rightPanelCache = uiNamespace getVariable QGVAR(rightPanelCache);
+private _originalNameCache = uiNamespace getVariable [QGVAR(treeOriginalDisplayNameCache), createHashMap];
+private _rightMetaCache = uiNamespace getVariable [QGVAR(treeRightItemMetaCache), createHashMap];
 
-private _currentCargo = []; // we only need this if we're filtering for favorites
+private _entries = [];
+private _isContainer = false;
+private _selectedItem = "";
+
+(["getSelectedLeaf", [_ctrlPanel]] call FUNC(treeControlInterface)) params ["", "_selectedItem"];
+
+private _currentCargo = [];
 if (GVAR(favoritesOnly)) then {
     _currentCargo = itemsWithMagazines GVAR(center) + backpacks GVAR(center);
     _currentCargo = _currentCargo arrayIntersect _currentCargo;
+};
+
+private _fnc_shouldIncludeWeapon = {
+    params ["_className"];
+
+    private _skip = GVAR(favoritesOnly) && {!(_className in GVAR(currentItems))} && {!((toLowerANSI _className) in GVAR(favorites))};
+    if (_skip) then {
+        switch (GVAR(currentLeftPanel)) do {
+            case IDC_buttonPrimaryWeapon: {
+                _skip = !(_className in (GVAR(currentItems) select IDX_CURR_PRIMARY_WEAPON_ITEMS));
+            };
+            case IDC_buttonHandgun: {
+                _skip = !(_className in (GVAR(currentItems) select IDX_CURR_HANDGUN_WEAPON_ITEMS));
+            };
+            case IDC_buttonSecondaryWeapon: {
+                _skip = !(_className in (GVAR(currentItems) select IDX_CURR_PRIMARY_WEAPON_ITEMS));
+            };
+            case IDC_buttonBinoculars: {
+                _skip = !(_className in (GVAR(currentItems) select IDX_CURR_BINO_ITEMS));
+            };
+        };
+    };
+
+    !_skip
+};
+
+private _fnc_pushEntry = {
+    params [
+        ["_className", "", [""]],
+        ["_displayName", "", [""]],
+        ["_picture", "", [""]],
+        ["_tooltip", "", [""]],
+        ["_isUnique", false, [false]],
+        ["_quantity", 0, [0]],
+        ["_baseDisplayName", "", [""]],
+        ["_color", [], [[]]]
+    ];
+
+    _entries pushBack [_className, _displayName, _picture, _tooltip, _color, _quantity];
+
+    if (_className != "") then {
+        private _cacheKey = format ["%1|%2", _ctrlIDC, toLowerANSI _className];
+        _originalNameCache set [_cacheKey, [_baseDisplayName, _displayName] select (_baseDisplayName == "")];
+        _rightMetaCache set [_cacheKey, [_isUnique]];
+    };
+};
+
+private _fnc_createWeaponEntry = {
+    params ["_configCategory", "_className", ["_pictureEntryName", "picture", [""]]];
+
+    if !([_className] call _fnc_shouldIncludeWeapon) exitWith {};
+
+    private _key = _configCategory + _className;
+
+    (_rightPanelCache getOrDefaultCall [_key, {
+        private _configPath = configFile >> _configCategory >> _className;
+
+        [configName _configPath, getText (_configPath >> "displayName"), getText (_configPath >> _pictureEntryName)]
+    }, true]) params ["_cfgClass", "_displayName", "_picture"];
+
+    if (_cfgClass == "") exitWith {};
+
+    private _color = [];
+    if ((toLowerANSI _cfgClass) in GVAR(favorites)) then {
+        _color = FAVORITES_COLOR;
+    };
+
+    [_cfgClass, _displayName, _picture, format ["%1\n%2", _displayName, _cfgClass], false, 0, _displayName, _color] call _fnc_pushEntry;
 };
 
 private _fnc_fillRightContainer = {
@@ -60,9 +136,7 @@ private _fnc_fillRightContainer = {
         _isUnique = true;
     };
 
-    // If not in cache, find info and cache it for later use
     (_rightPanelCache getOrDefaultCall [_configCategory + _className, {
-        // Get display name, picture and mass
         private _configPath = configFile >> _configCategory >> _className;
 
         // "Misc. items" magazines (e.g. spare barrels, intel, photos)
@@ -74,7 +148,6 @@ private _fnc_fillRightContainer = {
         if (_unknownOrigin && {isNull _configPath}) then {
             _configPath = _className call CBA_fnc_getItemConfig;
 
-            // Check if item is object (this should never happen)
             if (isNull _configPath) then {
                 _configPath = _className call CBA_fnc_getObjectConfig;
             };
@@ -83,24 +156,17 @@ private _fnc_fillRightContainer = {
         [getText (_configPath >> "displayName"), getText (_configPath >> "picture")]
     }, true]) params ["_displayName", "_picture"];
 
-    private _lbAdd = _ctrlPanel lnbAddRow ["", _displayName, "0"];
-    _ctrlPanel lnbSetText [[_lbAdd, 1], _displayName];
-    _ctrlPanel lnbSetData [[_lbAdd, 0], _className];
-    _ctrlPanel lnbSetPicture [[_lbAdd, 0], _picture];
-    _ctrlPanel lnbSetValue [[_lbAdd, 2], parseNumber _isUnique];
-    _ctrlPanel lnbSetTooltip [[_lbAdd, 0], format ["%1\n%2", _displayName, _className]];
+    private _color = [];
     if ((toLowerANSI _className) in GVAR(favorites)) then {
-        _ctrlPanel lnbSetColor [[_lbAdd, 1], FAVORITES_COLOR];
-        _ctrlPanel lnbSetColorRight [[_lbAdd, 1], FAVORITES_COLOR];
+        _color = FAVORITES_COLOR;
     };
+
+    [_className, _displayName, _picture, format ["%1\n%2", _displayName, _className], _isUnique, 0, _displayName, _color] call _fnc_pushEntry;
 };
 
-private _ctrlPanel = _display displayCtrl IDC_rightTabContent;
-private _listnBox = _display displayCtrl IDC_rightTabContentListnBox;
-
 // Retrieve compatible items
-private _isContainer = false;
-private _selectedItem = "";
+private _container = objNull;
+private _containerItems = [];
 private _compatibleItems = [];
 private _compatibleMagsMuzzle = [];
 private _compatibleMagsAll = createHashMap;
@@ -145,39 +211,52 @@ switch (GVAR(currentLeftPanel)) do {
             };
         };
     };
-    // Uniform, vest or backpack
     case IDC_buttonUniform;
     case IDC_buttonVest;
     case IDC_buttonBackpack: {
+        // Uniform, vest or backpack
         _isContainer = true;
 
-        // Get the currently selected item in panel
-        private _selectedItemIndex = lnbCurSelRow _listnBox;
-
-        // If something is selected, save it
-        if (_selectedItemIndex != -1) then {
-            _selectedItem = _listnBox lnbData [_selectedItemIndex, 0];
+        _container = switch (GVAR(currentLeftPanel)) do {
+            // Uniform
+            case IDC_buttonUniform: {
+                // Update load bar
+                // Get all items from container
+                _containerItems = uniformItems GVAR(center);
+                (_display displayCtrl IDC_loadIndicatorBar) progressSetPosition (loadUniform GVAR(center));
+                uniformContainer GVAR(center)
+            };
+            // Vest
+            case IDC_buttonVest: {
+                // Update load bar
+                // Get all items from container
+                _containerItems = vestItems GVAR(center);
+                (_display displayCtrl IDC_loadIndicatorBar) progressSetPosition (loadVest GVAR(center));
+                vestContainer GVAR(center)
+            };
+            // Backpack
+            case IDC_buttonBackpack: {
+                // Update load bar
+                // Get all items from container
+                _containerItems = backpackItems GVAR(center);
+                (_display displayCtrl IDC_loadIndicatorBar) progressSetPosition (loadBackpack GVAR(center));
+                backpackContainer GVAR(center)
+            };
         };
 
-        // This is for the "compatible magazines" tab when a container is open
         if (_ctrlIDC == IDC_buttonMag) then {
+            // This is for the "compatible magazines" tab when a container is open
             // Get all compatibles magazines with unit's weapons (including compatible magazines that aren't in configItems)
             {
                 _compatibleMagsAll insert [true, compatibleMagazines _x, []];
-            } forEach [GVAR(currentItems) select IDX_CURR_PRIMARY_WEAPON, GVAR(currentItems) select IDX_CURR_HANDGUN_WEAPON, GVAR(currentItems) select IDX_CURR_SECONDARY_WEAPON, GVAR(currentItems) select IDX_CURR_BINO];
+            } forEach [
+                GVAR(currentItems) select IDX_CURR_PRIMARY_WEAPON,
+                GVAR(currentItems) select IDX_CURR_HANDGUN_WEAPON,
+                GVAR(currentItems) select IDX_CURR_SECONDARY_WEAPON,
+                GVAR(currentItems) select IDX_CURR_BINO
+            ];
         };
     };
-};
-
-// Reset right panel content
-lbClear _ctrlPanel;
-lnbClear _listnBox;
-
-_ctrlPanel lbSetCurSel -1;
-_listnBox lnbSetCurSelRow -1;
-
-if (_isContainer) then {
-    _ctrlPanel = _listnBox;
 };
 
 // Force a "refresh" animation of the panel
@@ -188,13 +267,11 @@ if (_animate) then {
     _ctrlPanel ctrlCommit FADE_DELAY;
 };
 
-// Check if the left panel is a weapon. If so, right panel will be compatible items with weapon only
 private _leftPanelState = GVAR(currentLeftPanel) in [IDC_buttonPrimaryWeapon, IDC_buttonHandgun, IDC_buttonSecondaryWeapon, IDC_buttonBinoculars];
 
 // Add an empty entry if left panel is a weapon or bino
 if (_leftPanelState && {_ctrlIDC in [RIGHT_PANEL_ACC_IDCS, IDC_buttonCurrentMag, IDC_buttonCurrentMag2]}) then {
-    private _addEmpty = _ctrlPanel lbAdd format [" <%1>", localize "str_empty"];
-    _ctrlPanel lbSetValue [_addEmpty, -1];
+    _entries pushBack ["", format [" <%1>", localize "str_empty"], "", "", [], -1];
 };
 
 // Fill right panel according to category choice
@@ -209,7 +286,7 @@ switch (_ctrlIDC) do {
         if (_leftPanelState) then {
             {
                 if (_x in ((GVAR(virtualItems) get IDX_VIRT_ATTACHMENTS) get _index)) then {
-                    ["CfgWeapons", _x, _ctrlPanel] call FUNC(addListBoxItem);
+                    ["CfgWeapons", _x] call _fnc_createWeaponEntry;
                 };
             } forEach _compatibleItems;
         } else {
@@ -222,13 +299,13 @@ switch (_ctrlIDC) do {
             } forEach (keys ((GVAR(virtualItems) get IDX_VIRT_UNIQUE_ATTACHMENTS) get _index));
         };
     };
-    // Current primary & secondary muzzle compatible magazines
     case IDC_buttonCurrentMag;
     case IDC_buttonCurrentMag2: {
+        // Current primary & secondary muzzle compatible magazines
         if (_leftPanelState) then {
             {
                 if (_x in (GVAR(virtualItems) get IDX_VIRT_ITEMS_ALL)) then {
-                    ["CfgMagazines", _x, _ctrlPanel] call FUNC(addListBoxItem);
+                    ["CfgMagazines", _x] call _fnc_createWeaponEntry;
                 };
             } forEach _compatibleMagsMuzzle;
         };
@@ -238,7 +315,6 @@ switch (_ctrlIDC) do {
         {
             if (_x in (GVAR(virtualItems) get IDX_VIRT_ITEMS_ALL)) then {
                 ["CfgMagazines", _x] call _fnc_fillRightContainer;
-
                 continue;
             };
 
@@ -321,7 +397,7 @@ switch (_ctrlIDC) do {
                 // _y indicates if an item is truly unique or if it's a non-inventory item in a container (e.g. helmet in backpack)
                 ["CfgWeapons", _x, _y, true] call _fnc_fillRightContainer;
             };
-        } forEach (GVAR(virtualItems) get IDX_VIRT_UNIQUE_UNKNOWN_ITEMS); // if an item is here but in virtual items, it's just in the wrong place
+        } forEach (GVAR(virtualItems) get IDX_VIRT_UNIQUE_UNKNOWN_ITEMS);
     };
     // Custom buttons
     default {
@@ -329,7 +405,6 @@ switch (_ctrlIDC) do {
 
         if (_items isNotEqualTo []) then {
             {
-
                 switch (true) do {
                     // "Regular" misc. items
                     case (_x in (GVAR(virtualItems) get IDX_VIRT_MISC_ITEMS)): {
@@ -357,92 +432,58 @@ switch (_ctrlIDC) do {
     };
 };
 
+if (_isContainer) then {
+    private _countMap = createHashMap;
+    {
+        _countMap set [_x, (_countMap getOrDefault [_x, 0]) + 1];
+    } forEach _containerItems;
+
+    {
+        _x params ["_className", "_displayName", "", "", "", ["_quantity", 0]];
+        if (_className == "") then { continue; };
+
+        _quantity = _countMap getOrDefault [_className, 0];
+        _x set [1, format ["%1 (x%2)", _displayName, _quantity]];
+        _x set [5, _quantity];
+        _entries set [_forEachIndex, _x];
+    } forEach _entries;
+};
+
+[_ctrlPanel, _entries] call FUNC(fillLeftPanelGrouped);
+
 // When switching tabs, clear searchbox
 if (GVAR(currentRightPanel) != _ctrlIDC) then {
     (_display displayCtrl IDC_rightSearchbar) ctrlSetText "";
 };
 
-// Trigger event
 GVAR(currentRightPanel) = _ctrlIDC;
+uiNamespace setVariable [QGVAR(treeOriginalDisplayNameCache), _originalNameCache];
+uiNamespace setVariable [QGVAR(treeRightItemMetaCache), _rightMetaCache];
+
+// Trigger event
 [QGVAR(rightPanelFilled), [_display, GVAR(currentLeftPanel), _ctrlIDC]] call CBA_fnc_localEvent;
-
-// Add current items, change progress bar of container load and get relevant container
-if (_isContainer) then {
-    private _containerItems = [];
-    private _container = switch (GVAR(currentLeftPanel)) do {
-        // Uniform
-        case IDC_buttonUniform: {
-            // Update load bar
-            (_display displayCtrl IDC_loadIndicatorBar) progressSetPosition (loadUniform GVAR(center));
-
-            // Get all items from container
-            _containerItems = uniformItems GVAR(center);
-
-            uniformContainer GVAR(center)
-        };
-        // Vest
-        case IDC_buttonVest: {
-            // Update load bar
-            (_display displayCtrl IDC_loadIndicatorBar) progressSetPosition (loadVest GVAR(center));
-
-            // Get all items from container
-            _containerItems = vestItems GVAR(center);
-
-            vestContainer GVAR(center)
-        };
-        // Backpack
-        case IDC_buttonBackpack: {
-            // Update load bar
-            (_display displayCtrl IDC_loadIndicatorBar) progressSetPosition (loadBackpack GVAR(center));
-
-            // Get all items from container
-            _containerItems = backpackItems GVAR(center);
-
-            backpackContainer GVAR(center)
-        };
-    };
-
-    // Find out how many items of a type there are and update the number displayed
-    for "_lbIndex" from 0 to (lnbSize _ctrlPanel select 0) - 1 do {
-        private _xItem = _ctrlPanel lnbData [_lbIndex, 0];
-        _ctrlPanel lnbSetText [[_lbIndex, 2], str ({_xItem == _x} count _containerItems)];
-    };
-
-    // Refresh availibility of items based on space remaining in container
-    [_ctrlPanel, _container, _containerItems isNotEqualTo []] call FUNC(updateRightPanel);
-};
 
 // Sorting
 [_display, _control, _display displayCtrl IDC_sortRightTab, _display displayCtrl IDC_sortRightTabDirection] call FUNC(fillSort);
 
 if (_selectedItem != "") then {
-    if (_isContainer) then {
-        // Try to select previously selected item again, otherwise select nothing
-        private _index = -1;
-
-        for "_lbIndex" from 0 to (lnbSize _ctrlPanel select 0) - 1 do {
-            if ((_ctrlPanel lnbData [_lbIndex, 0]) == _selectedItem) exitWith {
-                _index = _lbIndex;
-            };
-        };
-
-        _ctrlPanel lnbSetCurSelRow _index;
-    } else {
-        // Try to select previously selected item again, otherwise select first item ("Empty")
-        private _index = 0;
-
-        for "_lbIndex" from 0 to (lbSize _ctrlPanel) - 1 do {
-            if ((_ctrlPanel lbData _lbIndex) == _selectedItem) exitWith {
-                _index = _lbIndex;
-            };
-        };
-
-        _ctrlPanel lbSetCurSel _index;
+    private _path = ["findLeafPathByData", [_ctrlPanel, _selectedItem]] call FUNC(treeControlInterface);
+    if (_path isNotEqualTo []) then {
+        _ctrlPanel tvSetCurSel _path;
     };
-} else {
-    if (_isContainer) then {
-        _ctrlPanel lnbSetCurSelRow -1; // select nothing
     } else {
-        _ctrlPanel lbSetCurSel 0; // select "Empty"
+    if (!_isContainer) then {
+        private _path = ["findLeafPathByData", [_ctrlPanel, ""]] call FUNC(treeControlInterface);
+        if (_path isEqualTo []) then {
+            private _leafPaths = ["collectLeafPaths", [_ctrlPanel, true]] call FUNC(treeControlInterface);
+            _path = _leafPaths param [0, []];
+        };
+        if (_path isNotEqualTo []) then {
+            _ctrlPanel tvSetCurSel _path;
     };
+    };
+};
+
+    if (_isContainer) then {
+    [_ctrlPanel, _container, _containerItems isNotEqualTo []] call FUNC(updateRightPanel);
 };

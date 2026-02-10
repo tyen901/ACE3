@@ -102,6 +102,7 @@ class RscText;
 class RscCombo;
 class RscListBox;
 class RscListNBox;
+class RscTree;
 class RscFrame;
 class RscControlsGroupNoScrollbars;
 class RscActivePicture;

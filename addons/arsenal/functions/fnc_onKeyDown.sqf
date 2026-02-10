@@ -25,6 +25,25 @@ GVAR(shiftState) = _shiftState;
 private _return = true;
 private _loadoutsDisplay = findDisplay IDD_loadouts_display;
 
+private _fnc_getFocusedClassName = {
+    params ["_display"];
+
+    private _className = "";
+
+    switch (true) do {
+        case (GVAR(leftTabFocus)): {
+            private _control = _display displayCtrl IDC_leftTabContent;
+            (["getSelectedLeaf", [_control]] call FUNC(treeControlInterface)) params ["", "_className"];
+        };
+        case (GVAR(rightTabFocus)): {
+            private _control = _display displayCtrl IDC_rightTabContent;
+            (["getSelectedLeaf", [_control]] call FUNC(treeControlInterface)) params ["", "_className"];
+        };
+    };
+
+    _className
+};
+
 // If in loadout screen
 if (!isNull _loadoutsDisplay) then {
     // If loadout search bar isn't focussed
@@ -78,21 +97,8 @@ if (!isNull _loadoutsDisplay) then {
             };
             // Export button / export classname
             case (_keyPressed == DIK_C && {_ctrlState}): {
-                if (GVAR(leftTabFocus) || {GVAR(rightTabFocus)} || {GVAR(rightTabLnBFocus)}) then {
-                    switch (true) do {
-                        case (GVAR(leftTabFocus)): {
-                            private _control = (_display displayCtrl IDC_leftTabContent);
-                            _control lbData (lbCurSel _control)
-                        };
-                        case (GVAR(rightTabFocus)): {
-                            private _control = (_display displayCtrl IDC_rightTabContent);
-                            _control lbData (lbCurSel _control)
-                        };
-                        case (GVAR(rightTabLnBFocus)): {
-                            private _control = (_display displayCtrl IDC_rightTabContentListnBox);
-                            _control lnbData [lnbCurSelRow _control, 0]
-                        };
-                    } params ["_className"];
+                if (GVAR(leftTabFocus) || {GVAR(rightTabFocus)}) then {
+                    private _className = [_display] call _fnc_getFocusedClassName;
 
                     "ace" callExtension ["clipboard:append", [_className]];
                     "ace" callExtension ["clipboard:complete", []];
@@ -104,21 +110,8 @@ if (!isNull _loadoutsDisplay) then {
             };
             // Export Parent
             case (_keyPressed == DIK_P && {_ctrlState}): {
-                if !(GVAR(leftTabFocus) || {GVAR(rightTabFocus)} || {GVAR(rightTabLnBFocus)}) exitWith {};
-                switch (true) do {
-                    case (GVAR(leftTabFocus)): {
-                        private _control = (_display displayCtrl IDC_leftTabContent);
-                        _control lbData (lbCurSel _control)
-                    };
-                    case (GVAR(rightTabFocus)): {
-                        private _control = (_display displayCtrl IDC_rightTabContent);
-                        _control lbData (lbCurSel _control)
-                    };
-                    case (GVAR(rightTabLnBFocus)): {
-                        private _control = (_display displayCtrl IDC_rightTabContentListnBox);
-                        _control lnbData [lnbCurSelRow _control, 0]
-                    };
-                } params ["_className"];
+                if !(GVAR(leftTabFocus) || {GVAR(rightTabFocus)}) exitWith {};
+                private _className = [_display] call _fnc_getFocusedClassName;
 
                 private _cfgConfig = if (GVAR(leftTabFocus)) then {
                     switch (GVAR(currentLeftPanel)) do {
@@ -185,14 +178,25 @@ if (!isNull _loadoutsDisplay) then {
             };
             // Panel up down
             case (_keyPressed in [DIK_UP, DIK_DOWN]): {
-                if (GVAR(leftTabFocus) || {GVAR(rightTabFocus)} || {GVAR(rightTabLnBFocus)}) then {
+                if (GVAR(leftTabFocus) || {GVAR(rightTabFocus)}) then {
                     _return = false;
                 };
             };
-            // Right panel lnb + and - buttons
+            // Right panel lnb + and - buttons / tree collapse-expand
             case (_keyPressed in [DIK_LEFT, DIK_RIGHT]): {
-                if (GVAR(rightTabLnBFocus)) then {
-                    [_display, parseNumber (_keyPressed != DIK_LEFT)] call FUNC(buttonCargo);
+                if (GVAR(rightTabFocus)) then {
+                    if (GVAR(currentLeftPanel) in [IDC_buttonUniform, IDC_buttonVest, IDC_buttonBackpack]) then {
+                        (["getSelectedLeaf", [_display displayCtrl IDC_rightTabContent]] call FUNC(treeControlInterface)) params ["", "_className"];
+                        if (_className != "") then {
+                            [_display, parseNumber (_keyPressed != DIK_LEFT)] call FUNC(buttonCargo);
+                        };
+                    } else {
+                        _return = false;
+                    };
+                } else {
+                    if (GVAR(leftTabFocus)) then {
+                        _return = false;
+                    };
                 };
             };
         };

@@ -15,12 +15,13 @@
  * Public: No
 */
 
-params ["_control", "_curSel"];
+params ["_control", "_path"];
 
-if (_curSel < 0) exitWith {};
+if (_path isEqualTo []) exitWith {};
+if (["isGroupPath", [_control, _path]] call FUNC(treeControlInterface)) exitWith {};
 
 private _display = ctrlParent _control;
-private _item = [_control lbData _curSel, _control lnbData [_curSel, 0]] select (ctrlType _control == CT_LISTNBOX);
+private _item = _control tvData _path;
 
 // When having chosen a new category, see if the current right panel can be kept open, otherwise take default
 private _currentRightPanel = _display displayCtrl GVAR(currentRightPanel);
@@ -124,7 +125,7 @@ switch (GVAR(currentLeftPanel)) do {
         call FUNC(showItem);
 
         // Display new items's info on the bottom right
-        [_display, _control, _curSel, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
+        [_display, _control, _path, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
     };
     // Handgun weapon
     case IDC_buttonHandgun: {
@@ -200,7 +201,7 @@ switch (GVAR(currentLeftPanel)) do {
         call FUNC(showItem);
 
         // Display new items's info on the bottom right
-        [_display, _control, _curSel, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
+        [_display, _control, _path, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
     };
     // Secondary weapon
     case IDC_buttonSecondaryWeapon: {
@@ -293,13 +294,13 @@ switch (GVAR(currentLeftPanel)) do {
 
                 // Display new items's info on the bottom right
                 call FUNC(itemInfo);
-            }, [_display, _control, _curSel, configFile >> "CfgWeapons" >> _item]] call CBA_fnc_execNextFrame;
+            }, [_display, _control, _path, configFile >> "CfgWeapons" >> _item]] call CBA_fnc_execNextFrame;
         } else {
             // Make unit switch to new item
             call FUNC(showItem);
 
             // Display new items's info on the bottom right
-            [_display, _control, _curSel, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
+            [_display, _control, _path, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
         };
     };
     // Headgear
@@ -320,7 +321,7 @@ switch (GVAR(currentLeftPanel)) do {
         TOGGLE_RIGHT_PANEL_HIDE
 
         // Display new items's info on the bottom right
-        [_display, _control, _curSel, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
+        [_display, _control, _path, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
     };
     // Uniform
     case IDC_buttonUniform: {
@@ -356,7 +357,7 @@ switch (GVAR(currentLeftPanel)) do {
         call FUNC(showItem);
 
         // Display new items's info on the bottom right
-        [_display, _control, _curSel, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
+        [_display, _control, _path, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
     };
     // Vest
     case IDC_buttonVest: {
@@ -391,7 +392,7 @@ switch (GVAR(currentLeftPanel)) do {
         call FUNC(showItem);
 
         // Display new items's info on the bottom right
-        [_display, _control, _curSel, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
+        [_display, _control, _path, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
     };
     // Backpack
     case IDC_buttonBackpack: {
@@ -426,7 +427,7 @@ switch (GVAR(currentLeftPanel)) do {
         call FUNC(showItem);
 
         // Display new items's info on the bottom right
-        [_display, _control, _curSel, configFile >> "CfgVehicles" >> _item] call FUNC(itemInfo);
+        [_display, _control, _path, configFile >> "CfgVehicles" >> _item] call FUNC(itemInfo);
     };
     // Facewear
     case IDC_buttonGoggles: {
@@ -446,7 +447,7 @@ switch (GVAR(currentLeftPanel)) do {
         TOGGLE_RIGHT_PANEL_HIDE
 
         // Display new items's info on the bottom right
-        [_display, _control, _curSel, configFile >> "CfgGlasses" >> _item] call FUNC(itemInfo);
+        [_display, _control, _path, configFile >> "CfgGlasses" >> _item] call FUNC(itemInfo);
     };
     // NVG
     case IDC_buttonNVG: {
@@ -466,7 +467,7 @@ switch (GVAR(currentLeftPanel)) do {
         TOGGLE_RIGHT_PANEL_HIDE
 
         // Display new items's info on the bottom right
-        [_display, _control, _curSel, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
+        [_display, _control, _path, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
     };
     // Binoculars
     case IDC_buttonBinoculars: {
@@ -541,7 +542,7 @@ switch (GVAR(currentLeftPanel)) do {
         call FUNC(showItem);
 
         // Display new items's info on the bottom right
-        [_display, _control, _curSel, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
+        [_display, _control, _path, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
     };
     // Map
     case IDC_buttonMap: {
@@ -561,7 +562,7 @@ switch (GVAR(currentLeftPanel)) do {
         TOGGLE_RIGHT_PANEL_HIDE
 
         // Display new items's info on the bottom right
-        [_display, _control, _curSel, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
+        [_display, _control, _path, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
     };
     // Compass
     case IDC_buttonCompass: {
@@ -580,7 +581,7 @@ switch (GVAR(currentLeftPanel)) do {
 
         TOGGLE_RIGHT_PANEL_HIDE
 
-        [_display, _control, _curSel, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
+        [_display, _control, _path, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
     };
     // Radio
     case IDC_buttonRadio: {
@@ -600,7 +601,7 @@ switch (GVAR(currentLeftPanel)) do {
         TOGGLE_RIGHT_PANEL_HIDE
 
         // Display new items's info on the bottom right
-        [_display, _control, _curSel, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
+        [_display, _control, _path, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
     };
     // Watch
     case IDC_buttonWatch: {
@@ -619,7 +620,7 @@ switch (GVAR(currentLeftPanel)) do {
 
         TOGGLE_RIGHT_PANEL_HIDE
 
-        [_display, _control, _curSel, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
+        [_display, _control, _path, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
     };
     // GPS or UAV Terminal
     case IDC_buttonGPS: {
@@ -639,7 +640,7 @@ switch (GVAR(currentLeftPanel)) do {
         TOGGLE_RIGHT_PANEL_HIDE
 
         // Display new items's info on the bottom right
-        [_display, _control, _curSel, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
+        [_display, _control, _path, configFile >> "CfgWeapons" >> _item] call FUNC(itemInfo);
     };
     // Face
     case IDC_buttonFace: {
@@ -653,7 +654,7 @@ switch (GVAR(currentLeftPanel)) do {
 
         TOGGLE_RIGHT_PANEL_HIDE
 
-        [_display, _control, _curSel, configFile >> "CfgFaces" >> _item] call FUNC(itemInfo);
+        [_display, _control, _path, configFile >> "CfgFaces" >> _item] call FUNC(itemInfo);
     };
     // Voice
     case IDC_buttonVoice: {
@@ -666,7 +667,7 @@ switch (GVAR(currentLeftPanel)) do {
         TOGGLE_RIGHT_PANEL_HIDE
 
         // Display new items's info on the bottom right
-        [_display, _control, _curSel, configFile >> "CfgVoice" >> _item] call FUNC(itemInfo);
+        [_display, _control, _path, configFile >> "CfgVoice" >> _item] call FUNC(itemInfo);
     };
     // Insignia
     case IDC_buttonInsignia: {
@@ -690,7 +691,7 @@ switch (GVAR(currentLeftPanel)) do {
         };
 
         // Display new items's info on the bottom right
-        [_display, _control, _curSel, _itemCfg] call FUNC(itemInfo);
+        [_display, _control, _path, _itemCfg] call FUNC(itemInfo);
     };
 };
 

@@ -555,18 +555,20 @@ class GVAR(display) {
             w = QUOTE(safeZoneW);
             h = QUOTE(safeZoneH);
         };
-        class leftTabContent: RscListBox {
+        class leftTabContent: RscTree {
             idc = IDC_leftTabContent;
             colorBackground[] = {0,0,0,0};
-            colorSelectBackground[] = {1,1,1,0.5};
-            colorSelectBackground2[] = {1,1,1,0.5};
-            colorPictureSelected[] = {1,1,1,1};
             colorSelect[] = {1,1,1,1};
-            colorSelect2[] = {1,1,1,1};
-            colorPictureRightSelected[] = {1,1,1,1};
-            colorTextRight[] = {0.5, 0.5, 0.5, 0};
-            onLBSelChanged = QUOTE(call FUNC(onSelChangedLeft));
-            onLBDblClick = QUOTE(call FUNC(onPanelDblClick));
+            colorBorder[] = {0,0,0,0};
+            colorLines[] = {0,0,0,0};
+            colorPicture[] = {1,1,1,1};
+            colorPictureSelected[] = {1,1,1,1};
+            colorPictureDisabled[] = {1,1,1,0.25};
+            expandOnDoubleclick = 1;
+            multiselectEnabled = 0;
+            disableKeyboardSearch = 1;
+            onTreeSelChanged = QUOTE(call FUNC(onSelChangedLeft));
+            onTreeDblClick = QUOTE(call FUNC(onPanelDblClick));
             onSetFocus = QUOTE(GVAR(leftTabFocus) = true);
             onKillFocus = QUOTE(GVAR(leftTabFocus) = false);
             x = QUOTE(safeZoneX + 13 * GRID_W);
@@ -577,39 +579,12 @@ class GVAR(display) {
         };
         class rightTabContent: leftTabContent {
             idc = IDC_rightTabContent;
-            drawSideArrows = 1;
-            disableOverflow = 1;
-            onLBSelChanged = QUOTE(call FUNC(onSelChangedRight));
-            onLBDblClick = QUOTE(call FUNC(onPanelDblClick));
+            onTreeSelChanged = QUOTE(call FUNC(onSelChangedRight));
+            onTreeDblClick = QUOTE(call FUNC(onPanelDblClick));
             onSetFocus = QUOTE(GVAR(rightTabFocus) = true);
             onKillFocus = QUOTE(GVAR(rightTabFocus) = false);
             x = QUOTE(safeZoneX + safeZoneW - 93 * GRID_W);
             h = QUOTE(safeZoneH - 28 * GRID_H);
-        };
-        class rightTabContentListnBox: RscListNBox {
-            idc = IDC_rightTabContentListnBox;
-            colorBackground[] = {0,0,0,0};
-            colorSelectBackground[] = {1,1,1,0.5};
-            colorSelectBackground2[] = {1,1,1,0.5};
-            colorPictureSelected[] = {1,1,1,1};
-            colorSelect[] = {1,1,1,1};
-            colorSelect2[] = {1,1,1,1};
-            colorPictureRightSelected[] = {1,1,1,1};
-            colorTextRight[] = {0.5, 0.5, 0.5, 0};
-            columns[] = {0.07, 0.15, 0.75};
-            idcLeft = IDC_arrowMinus;
-            idcRIght = IDC_arrowPlus;
-            drawSideArrows = 1;
-            disableOverflow = 1;
-            onLBSelChanged = QUOTE(call FUNC(onSelChangedRightListnBox));
-            onLBDblClick = QUOTE(call FUNC(onPanelDblClick));
-            onSetFocus = QUOTE(GVAR(rightTabLnBFocus) = true);
-            onKillFocus = QUOTE(GVAR(rightTabLnBFocus) = false);
-            x = QUOTE(safeZoneX + safeZoneW - 93 * GRID_W);
-            y = QUOTE(safeZoneY + 14 * GRID_H);
-            w = QUOTE(80 * GRID_W);
-            h = QUOTE(safeZoneH - 34 * GRID_H);
-            sizeEx = QUOTE(7 * GRID_H);
         };
         class sortLeftTab: RscCombo {
             idc = IDC_sortLeftTab;

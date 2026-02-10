@@ -56,15 +56,20 @@ private _container = switch (GVAR(currentLeftPanel)) do {
     };
 };
 
-// Clear number of owned items
-private _ctrlList = _display displayCtrl IDC_rightTabContentListnBox;
+private _ctrlTree = _display displayCtrl IDC_rightTabContent;
+private _nameCache = uiNamespace getVariable [QGVAR(treeOriginalDisplayNameCache), createHashMap];
 
-for "_lbIndex" from 0 to (lbSize _ctrlList) - 1 do {
-    _ctrlList lnbSetText [[_lbIndex, 2], "0"];
-};
+// Clear number of owned items
+{
+    private _item = _ctrlTree tvData _x;
+    if (_item == "") then { continue; };
+
+    private _key = format ["%1|%2", GVAR(currentRightPanel), toLowerANSI _item];
+    ["setLeafQuantityText", [_ctrlTree, _x, 0, _nameCache getOrDefault [_key, _ctrlTree tvText _x]]] call FUNC(treeControlInterface);
+} forEach (["collectLeafPaths", [_ctrlTree, false]] call FUNC(treeControlInterface));
 
 // Update load bar
 (_display displayCtrl IDC_loadIndicatorBar) progressSetPosition 0;
 
-// Refresh availibility of items based on space remaining in container
-[_ctrlList, _container, false] call FUNC(updateRightPanel);
+// Refresh availability of items based on space remaining in container
+[_ctrlTree, _container, false] call FUNC(updateRightPanel);

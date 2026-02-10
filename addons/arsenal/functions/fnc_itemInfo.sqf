@@ -8,7 +8,7 @@
  * Arguments:
  * 0: Arsenal display <DISPLAY>
  * 1: Current panel control <CONTROL>
- * 2: Current panel selection <NUMBER>
+ * 2: Current panel selection <NUMBER/ARRAY>
  * 3: Item config entry <CONFIG>
  *
  * Return Value:
@@ -29,7 +29,20 @@ if (isClass _itemCfg) then {
     [QGVAR(displayActions), [_display, _control, _curSel, _itemCfg]] call CBA_fnc_localEvent;
 
     // Name + author
-    (_display displayCtrl IDC_infoName) ctrlSetText ([_control lbText _curSel, _control lnbText [_curSel, 1]] select (ctrlType _control == CT_LISTNBOX));
+    private _displayName = "";
+    if (!isNull _control && {_curSel isEqualType []} && {_curSel isNotEqualTo []}) then {
+        _displayName = _control tvText _curSel;
+
+        if (ctrlIDC _control == IDC_rightTabContent && {GVAR(currentLeftPanel) in [IDC_buttonUniform, IDC_buttonVest, IDC_buttonBackpack]}) then {
+            private _item = _control tvData _curSel;
+            if (_item != "") then {
+                private _cacheKey = format ["%1|%2", GVAR(currentRightPanel), toLowerANSI _item];
+                _displayName = (uiNamespace getVariable [QGVAR(treeOriginalDisplayNameCache), createHashMap]) getOrDefault [_cacheKey, _displayName];
+            };
+        };
+    };
+
+    (_display displayCtrl IDC_infoName) ctrlSetText _displayName;
 
     private _itemAuthor = getText (_itemCfg >> "author");
     (_display displayCtrl IDC_infoAuthor) ctrlSetText ([localize "STR_AUTHOR_UNKNOWN", format [localize "STR_FORMAT_AUTHOR_SCRIPTED", _itemAuthor]] select (_itemAuthor != ""));
@@ -47,7 +60,6 @@ if (isClass _itemCfg) then {
         _ctrlDLCBackground ctrlSetFade 0;
         _ctrlDLC ctrlSetFade 0;
 
-        // If an item is from a DLC, set it so when you press the icon on the bottom right it opens the DLC page
         if ((getNumber (configFile >> "CfgMods" >> _dlc >> "appId")) > 0) then {
             _ctrlDLC ctrlSetEventHandler ["MouseExit", format ["(_this select 0) ctrlSetText '%1';", _logo]];
             _ctrlDLC ctrlSetEventHandler ["MouseEnter", format ["(_this select 0) ctrlSetText '%1';", _logoOver]];
@@ -67,10 +79,9 @@ if (isClass _itemCfg) then {
 
     _ctrlDLC ctrlCommit 0;
     _ctrlDLCBackground ctrlCommit 0;
-
 } else {
-    [QGVAR(displayStats), [_display, _control, -1, nil]] call CBA_fnc_localEvent;
-    [QGVAR(displayActions), [_display, _control, -1, nil]] call CBA_fnc_localEvent;
+    [QGVAR(displayStats), [_display, _control, [], nil]] call CBA_fnc_localEvent;
+    [QGVAR(displayActions), [_display, _control, [], nil]] call CBA_fnc_localEvent;
 
     _ctrlInfo ctrlSetFade 1;
     _ctrlInfo ctrlCommit FADE_DELAY;
