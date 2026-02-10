@@ -44,6 +44,134 @@ private _fnc_getFocusedClassName = {
     _className
 };
 
+private _treeCollapsedRoots = uiNamespace getVariable [QGVAR(treeCollapsedRoots), createHashMap];
+uiNamespace setVariable [QGVAR(treeCollapsedRoots), _treeCollapsedRoots];
+
+private _fnc_focusTreeControl = {
+    params ["_display"];
+
+    if (GVAR(leftTabFocus) || {GVAR(rightTabFocus)}) exitWith {};
+
+    ctrlSetFocus (_display displayCtrl IDC_leftTabContent);
+};
+
+private _fnc_getPreferredTreeControl = {
+    params ["_display"];
+
+    private _leftTree = _display displayCtrl IDC_leftTabContent;
+    private _rightTree = _display displayCtrl IDC_rightTabContent;
+
+    if (GVAR(rightTabFocus)) exitWith {_rightTree};
+    if (GVAR(leftTabFocus)) exitWith {_leftTree};
+
+    _leftTree
+};
+
+private _fnc_treeCollectVisiblePaths = {
+    params ["_tree"];
+
+    private _paths = [];
+
+    for "_rootIndex" from 0 to ((_tree tvCount []) - 1) do {
+        private _rootPath = [_rootIndex];
+        private _rootKey = format ["%1|%2", ctrlIDC _tree, _rootIndex];
+        _paths pushBack _rootPath;
+
+        if (
+            (["isGroupPath", [_tree, _rootPath]] call FUNC(treeControlInterface)) &&
+            {!(_treeCollapsedRoots getOrDefault [_rootKey, false])}
+        ) then {
+            for "_leafIndex" from 0 to ((_tree tvCount _rootPath) - 1) do {
+                _paths pushBack (_rootPath + [_leafIndex]);
+            };
+        };
+    };
+
+    _paths
+};
+
+private _fnc_treeMoveSelection = {
+    params ["_tree", "_step"];
+
+    private _visiblePaths = [_tree] call _fnc_treeCollectVisiblePaths;
+    if (_visiblePaths isEqualTo []) exitWith {};
+
+    private _currentPath = tvCurSel _tree;
+    private _currentIndex = _visiblePaths find _currentPath;
+    if (_currentIndex == -1) then {
+        _currentIndex = 0;
+    };
+
+    private _targetIndex = (_currentIndex + _step) max 0 min ((count _visiblePaths) - 1);
+    _tree tvSetCurSel (_visiblePaths select _targetIndex);
+};
+
+private _fnc_handleTreeArrowNavigation = {
+    params ["_display", "_keyPressed", "_shiftState"];
+
+    [_display] call _fnc_focusTreeControl;
+    private _tree = [_display] call _fnc_getPreferredTreeControl;
+    if (isNull _tree) exitWith {false};
+
+    private _path = tvCurSel _tree;
+    if (_path isEqualTo []) then {
+        private _visiblePaths = [_tree] call _fnc_treeCollectVisiblePaths;
+        if (_visiblePaths isEqualTo []) exitWith {false};
+        _tree tvSetCurSel (_visiblePaths select 0);
+        _path = tvCurSel _tree;
+    };
+
+    // Shift+Left/Right adjusts container quantity for right tree leaf selections.
+    if (
+        (_keyPressed in [DIK_LEFT, DIK_RIGHT]) &&
+        {_shiftState} &&
+        {_tree isEqualTo (_display displayCtrl IDC_rightTabContent)} &&
+        {GVAR(currentLeftPanel) in [IDC_buttonUniform, IDC_buttonVest, IDC_buttonBackpack]}
+    ) exitWith {
+        (["getSelectedLeaf", [_tree]] call FUNC(treeControlInterface)) params ["", "_className"];
+        if (_className != "") then {
+            [_display, parseNumber (_keyPressed != DIK_LEFT)] call FUNC(buttonCargo);
+        };
+
+        // Consume Shift+Left/Right in container mode so group rows don't collapse/expand.
+        true
+    };
+
+    switch (_keyPressed) do {
+        case DIK_UP: {
+            [_tree, -1] call _fnc_treeMoveSelection;
+            true
+        };
+        case DIK_DOWN: {
+            [_tree, 1] call _fnc_treeMoveSelection;
+            true
+        };
+        case DIK_LEFT: {
+            if (["isGroupPath", [_tree, _path]] call FUNC(treeControlInterface)) then {
+                _treeCollapsedRoots set [format ["%1|%2", ctrlIDC _tree, _path select 0], true];
+                _tree tvCollapse _path;
+            } else {
+                private _parentPath = _path select [0, (count _path) - 1];
+                if (_parentPath isNotEqualTo []) then {
+                    _tree tvSetCurSel _parentPath;
+                };
+            };
+            true
+        };
+        case DIK_RIGHT: {
+            if (["isGroupPath", [_tree, _path]] call FUNC(treeControlInterface)) then {
+                if ((_tree tvCount _path) > 0) then {
+                    _treeCollapsedRoots set [format ["%1|%2", ctrlIDC _tree, _path select 0], false];
+                    _tree tvExpand _path;
+                    _tree tvSetCurSel (_path + [0]);
+                };
+            };
+            true
+        };
+        default {false};
+    };
+};
+
 // If in loadout screen
 if (!isNull _loadoutsDisplay) then {
     // If loadout search bar isn't focussed
@@ -178,26 +306,11 @@ if (!isNull _loadoutsDisplay) then {
             };
             // Panel up down
             case (_keyPressed in [DIK_UP, DIK_DOWN]): {
-                if (GVAR(leftTabFocus) || {GVAR(rightTabFocus)}) then {
-                    _return = false;
-                };
+                _return = [_display, _keyPressed, _shiftState] call _fnc_handleTreeArrowNavigation;
             };
-            // Right panel lnb + and - buttons / tree collapse-expand
+            // Tree left/right navigation, with Shift+Left/Right quantity adjust on right container leaves.
             case (_keyPressed in [DIK_LEFT, DIK_RIGHT]): {
-                if (GVAR(rightTabFocus)) then {
-                    if (GVAR(currentLeftPanel) in [IDC_buttonUniform, IDC_buttonVest, IDC_buttonBackpack]) then {
-                        (["getSelectedLeaf", [_display displayCtrl IDC_rightTabContent]] call FUNC(treeControlInterface)) params ["", "_className"];
-                        if (_className != "") then {
-                            [_display, parseNumber (_keyPressed != DIK_LEFT)] call FUNC(buttonCargo);
-                        };
-                    } else {
-                        _return = false;
-                    };
-                } else {
-                    if (GVAR(leftTabFocus)) then {
-                        _return = false;
-                    };
-                };
+                _return = [_display, _keyPressed, _shiftState] call _fnc_handleTreeArrowNavigation;
             };
         };
     } else {
